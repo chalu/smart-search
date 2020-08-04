@@ -1,45 +1,32 @@
 {
-  "name": "js-starter",
+  "name": "smart-search",
   "version": "0.0.1",
-  "description": "A boilerplate for starting js code",
-  "keywords": [
-    "js-starter",
-    "boilerplate"
-  ],
+  "description": "A simple web app with in-app search magic",
   "private": false,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "directories": {
     "test": "__tests__"
   },
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cover": "jest --coverage",
+    "test": "jest --coverage",
     "lint": "eslint \"src/**/*.js\"",
-    "start": "parcel ./src/index.html"
+    "start": "parcel ./src/index.html",
+    "build": "parcel build ./src/index.html --experimental-scope-hoisting --no-source-maps"
   },
   "author": {
-    "name": "Build For SDG",
-    "email": "buildforsdg@andela.com"
-  },
-  "homepage": "https://github.com/BuildForSDG/js-starter#readme",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/BuildForSDG/js-starter.git"
-  },
-  "bugs": {
-    "url": "https://github.com/BuildForSDG/js-starter/issues"
+    "name": "Charles Odili",
+    "email": "chaluwa@gmail.com"
   },
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "immer": "^7.0.7"
+  },
   "devDependencies": {
     "@babel/core": "^7.9.0",
     "@babel/preset-env": "^7.9.5",
     "babel-jest": "^25.4.0",
-    "eslint": "^6.8.0",
-    "eslint-config-airbnb-base": "^14.1.0",
-    "eslint-plugin-import": "^2.20.2",
+    "eslint": "^7.6.0",
+    "eslint-config-airbnb-base": "^14.2.0",
+    "eslint-plugin-import": "^2.22.0",
     "jest": "^25.4.0",
     "parcel-bundler": "^1.12.4"
   },
