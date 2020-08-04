@@ -1,6 +1,8 @@
 # Smart Search
 
-> Performant way to load large data into frontend apps and intuitively query such data. 
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/2cad1fd9fd484bc19577e3ac7c23a30f)](https://www.codacy.com/manual/chalu/smart-search?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=chalu/smart-search&amp;utm_campaign=Badge_Grade) [![Netlify Status](https://api.netlify.com/api/v1/badges/2ca18326-0aa0-4ddf-a192-8e7093bc97b0/deploy-status)](https://app.netlify.com/sites/smart-inapp-search/deploys)
+
+> Performant way to load large data into frontend apps and intuitively query such data. See it live at [https://smart-inapp-search.netlify.app](https://smart-inapp-search.netlify.app)
 
 <img src="./src/images/app-preview.png">
 
