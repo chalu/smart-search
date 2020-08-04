@@ -10,13 +10,13 @@
   4. Consider paginating the image collection with a sort of re-cycler view. This
      should not diminish the initial problem space of optimised processing for large data
 
-  5. Consider using components for the UI elements and don't allow their 
+  5. Consider using components for the UI elements and don't allow their
      internal implementation details to leak out. Wrap such with a clean API
     e.g Do pBar.turnOn(); pBar.progressTo(50) or pBar.turnOn().progressTo(50)
     instead of pBar.classList.remove('off')
 
-  6. If it makes sense, use HTTP streams so that we dont have to wait to 
-     fetch all 3.5k records before displaying anything. Can be 
+  6. If it makes sense, use HTTP streams so that we dont have to wait to
+     fetch all 3.5k records before displaying anything. Can be
      very poor UX on slow connections, even if not displaying any images
 
   7. Make the current console.log logs viewable as part of the app, visualize / graph
@@ -44,31 +44,85 @@ const months = [
   ['Dec', 'December']
 ];
 
-const iObserver = new IntersectionObserver(entries => {
+const getProgressBar = () => {
+  let pBar;
+  return () => {
+    if (pBar) return pBar;
+
+    pBar = document.querySelector('progress');
+    return pBar;
+  };
+};
+
+const pBar = getProgressBar();
+
+const getDomParser = () => {
+  let parser;
+  return () => {
+    if (parser) return parser;
+
+    parser = new DOMParser();
+    return parser;
+  };
+};
+
+const getContentArea = () => {
+  let root;
+  return () => {
+    if (root) return root;
+
+    root = document.querySelector('[data-collection-wrap]');
+    return root;
+  };
+};
+
+const getCountDisplay = () => {
+  let node;
+  return () => {
+    if (node) return node;
+
+    node = document.querySelector('[data-search-wrap] span:nth-child(1)');
+    return node;
+  };
+};
+
+const getAgeDisplay = () => {
+  let node;
+  return () => {
+    if (node) return node;
+
+    node = document.querySelector('[data-search-wrap] span:nth-child(2)');
+    return node;
+  };
+};
+
+const iObserver = new IntersectionObserver((entries) => {
   const srcBackup = ({ target }) => {
-    // TODO this can be a data-url if it helps to 
+    // TODO this can be a data-url if it helps to
     // save bandwidth, latency e.t.c
     target.src = 'https://placehold.it/48x48.png';
   };
-  entries.filter(e => e.isIntersecting === true).forEach(({ target }) => {
-    // TODO consider un-observing the IMG elements as well
-    requestAnimationFrame(() => {
-      const img = target.querySelector('img');
-      if (img && !img.hasAttribute('src') && img.hasAttribute('data-src')) {
-        img.addEventListener('error', srcBackup);
-        img.setAttribute('src', img.getAttribute('data-src'));
-      }
+  entries
+    .filter((e) => e.isIntersecting === true)
+    .forEach(({ target }) => {
+      // TODO consider un-observing the IMG elements as well
+      requestAnimationFrame(() => {
+        const img = target.querySelector('img');
+        if (img && !img.hasAttribute('src') && img.hasAttribute('data-src')) {
+          img.addEventListener('error', srcBackup);
+          img.setAttribute('src', img.getAttribute('data-src'));
+        }
+      });
     });
-  });
 });
 
 const computeAges = (devIds = [], ages = {}) => {
   const { min, max, avg } = ages;
 
   const id = devIds.shift();
-  if(!id) return { min, max, avg };
+  if (!id) return { min, max, avg };
 
-  const dev = id ? state.devs.find(d => d.id === id) : undefined;
+  const dev = id ? state.devs.find((d) => d.id === id) : undefined;
   if (!dev) return { min, max, avg };
 
   const yob = new Date(dev.bio.dob).getFullYear();
@@ -107,54 +161,49 @@ const skillByCompetency = () => {
       key: /^=$/,
       fn: (tagQry, level, skillGraph) => {
         const tag = tagQry.replace('#', '');
-        const found = skillGraph.find(({ skill, competence = '' }) => {
-          return (
-            tag === skill.toLowerCase() && level === competence.toLowerCase()
-          );
-        });
-        return found != undefined;
+        const found = skillGraph.find(
+          ({ skill, competence = '' }) => tag === skill.toLowerCase() && level === competence.toLowerCase()
+        );
+        return found !== undefined;
       }
     },
     {
       key: /^>=$/,
       fn: (tagQry, level, skillGraph) => {
         const tag = tagQry.replace('#', '');
-        const levelWeight = weightedLevels
-          .map(l => l.toLowerCase())
-          .indexOf(level);
+        const levelWeight = weightedLevels.map((l) => l.toLowerCase()).indexOf(level);
         if (levelWeight < 0) return false;
 
-        const found = skillGraph.find(({ skill, competence = '' }) => {
-          return (
-            tag === skill.toLowerCase() &&
-            weightedLevels.indexOf(competence) >= levelWeight
-          );
-        });
-        return found != undefined;
+        const found = skillGraph.find(
+          ({ skill, competence = '' }) => tag
+            === skill.toLowerCase() && weightedLevels.indexOf(competence) >= levelWeight
+        );
+        return found !== undefined;
       }
     }
   ];
 
   const handler = (query, { tags }) => {
+    let status = false;
     const operator = query.match(operatorRegex);
+
     if (operator && operator[0]) {
       const op = operator[0].trim();
       const opHndlr = opHandlers.find(({ key }) => key.test(`${op}`));
 
-      if (!opHndlr) return;
+      if (!opHndlr) return status;
 
       let [tag, level] = query.split(operatorRegex);
-      if (!level) return;
+      if (!level) return status;
 
       tag = tag.trim();
       level = level.trim();
       const { fn } = opHndlr;
-      const status = fn(tag, level, tags);
+      status = fn(tag, level, tags);
       // console.log(`match for ${dev.bio.name}: ${status}`);
-      return status;
     }
 
-    return false;
+    return status;
   };
 
   return { matcher, handler };
@@ -222,21 +271,21 @@ const dobInQuarters = () => {
         const qtr = qtrs.find(({ key }) => key.test(`${q}`));
         if (!qtr) return false;
 
-        const { data: [start, end] } = qtr;
+        const {
+          data: [start, end]
+        } = qtr;
         return m >= start && m <= end;
       }
     },
     {
       key: /^!=$/,
-      fn: (q, m) => {
-        return qtrs
-          .filter(({ key }) => !key.test(`${q}`))
-          .map(({ data }) => {
-            const [start, end] = data;
-            return m >= start && m <= end;
-          })
-          .includes(true);
-      }
+      fn: (q, m) => (qtrs
+        .filter(({ key }) => !key.test(`${q}`))
+        .map(({ data }) => {
+          const [start, end] = data;
+          return m >= start && m <= end;
+        })
+        .includes(true))
     },
     {
       key: /^>=$/,
@@ -256,9 +305,7 @@ const dobInQuarters = () => {
       fn: (q, m) => {
         const pos = parseInt(q.charAt(1), 10) - 1;
         return qtrs
-          .filter((qtr, index) => {
-            return index >= pos;
-          })
+          .filter((qtr, index) => index >= pos)
           .map(({ data }) => {
             const [start, end] = data;
             return m >= start && m <= end;
@@ -273,45 +320,32 @@ const dobInQuarters = () => {
     const month = dob.getMonth();
     const operator = query.match(operatorRegex);
 
+    let status = false;
     if (operator && operator[0]) {
       const op = operator[0].trim();
-      const opHndlr = opHandlers.find(({ key }) => {
-        const status = key.test(`${op}`);
-        return status;
-      });
+      const opHndlr = opHandlers.find(({ key }) => key.test(`${op}`));
 
-      if (!opHndlr) return;
+      if (!opHndlr) return status;
 
       let qry = query.split(operatorRegex)[1];
-      if (!qry) return;
+      if (!qry) return status;
 
       qry = qry.trim();
       const { fn } = opHndlr;
-      const status = fn(qry, month);
+      status = fn(qry, month);
       // console.log(`match for ${dev.bio.name}: ${status}`);
-      return status;
     }
 
-    return false;
+    return status;
   };
 
   return { matcher: queryMatcher, handler: queryHandler };
 };
 
-const getProgressBar = () => {
-  let pBar;
-  return () => {
-    if (pBar) return pBar;
-
-    pBar = document.querySelector('progress');
-    return pBar;
-  };
-};
-
-const pBar = getProgressBar();
-
-const makeARow = dev => {
-  const { id, avatar, bio, country } = dev;
+const makeARow = (dev) => {
+  const {
+    id, avatar, bio, country
+  } = dev;
 
   const dob = new Date(bio.dob);
   const names = bio.name.split(' ');
@@ -331,92 +365,6 @@ const makeARow = dev => {
   `;
 };
 
-const getDomParser = () => {
-  let parser;
-  return () => {
-    if (parser) return parser;
-
-    parser = new DOMParser();
-    return parser;
-  };
-};
-
-const getContentArea = () => {
-  let root;
-  return () => {
-    if (root) return root;
-
-    root = document.querySelector('[data-collection-wrap]');
-    return root;
-  };
-};
-
-const getCountDisplay = () => {
-  let node;
-  return () => {
-    if (node) return node;
-
-    node = document.querySelector('[data-search-wrap] span:nth-child(1)');
-    return node;
-  };
-};
-
-const getAgeDisplay = () => {
-  let node;
-  return () => {
-    if (node) return node;
-
-    node = document.querySelector('[data-search-wrap] span:nth-child(2)');
-    return node;
-  };
-};
-
-const queryData = ({ target }) => {
-  if (state.status === 'LOADING') return;
-
-  const utterance = (target.value || '').toLowerCase();
-  const dataWrap = document.querySelector('[data-collection-wrap]');
-  const devsLen = state.devs.length;
-  const queryStatus = getCountDisplay();
-  const ageStatus = getAgeDisplay();
-  if (utterance === '') {
-    dataWrap.classList.remove('filtered');
-    ageStatus().textContent = '';
-    queryStatus().textContent = `${devsLen} of ${devsLen}`;
-    return;
-  }
-
-  const parts = utterance.split(/&\s*/).map(q => (q || '').trim());
-  const query = parts[parts.length - 1];
-  const isInValidQuery = query.length <= 2;
-
-  if (isInValidQuery) {
-    dataWrap.classList.remove('filtered');
-    ageStatus().textContent = '';
-    queryStatus().textContent = `${devsLen} of ${devsLen}`;
-    return;
-  };
-
-  const qHandler = state.queryHandlers.find(({ matcher }) => {
-    return matcher && matcher.test(query) === true;
-  });
-
-  if (!qHandler) {
-    dataWrap.classList.remove('filtered');
-    ageStatus().textContent = '';
-    queryStatus().textContent = `${devsLen} of ${devsLen}`;
-    return;
-  };
-
-  state.matched = [];
-  state.query = query;
-  state.queueIndex = 0;
-  state.processQueue = [];
-  state.queryHandler = qHandler.handler;
-
-  requestIdleCallback(processQuery);
-};
-
 const displayMatches = () => {
   const queue = state.processQueue.splice(0);
   if (queue.length <= 0) {
@@ -429,14 +377,14 @@ const displayMatches = () => {
   console.log(`Queue: ${queue.length}, Matched: ${state.matched.length}`);
 
   const devDOM = [...document.querySelectorAll('.dev-item')];
-  devDOM.forEach(div => {
+  devDOM.forEach((div) => {
     const id = div.dataset.devId;
     if (id && !state.matched.includes(id)) {
       div.classList.remove('matched');
     }
   });
 
-  queue.forEach(devId => {
+  queue.forEach((devId) => {
     const div = document.querySelector(`[data-dev-id="${devId}"]`);
     if (div) {
       div.classList.add('matched');
@@ -454,25 +402,70 @@ const displayMatches = () => {
   requestAnimationFrame(displayMatches);
 };
 
-const processQuery = deadline => {
+const processQuery = (deadline) => {
   while (
     // TODO 0.75 should be an intuitively named top-level constant
     // TODO if possible, expose what 0.75 represents to the UI and allow the user to control it
-    parseInt(deadline.timeRemaining() * 0.75, 10) > 0 &&
-    state.queueIndex < state.devs.length
+    parseInt(deadline.timeRemaining() * 0.75, 10) > 0
+      && state.queueIndex < state.devs.length
   ) {
     const dev = state.devs[state.queueIndex];
     const matched = state.queryHandler(state.query, dev);
     if (matched === true) {
       state.processQueue.push(dev.id);
     }
-    state.queueIndex++;
+    state.queueIndex += 1;
   }
 
   requestAnimationFrame(displayMatches);
   if (state.queueIndex < state.devs.length) {
     requestIdleCallback(processQuery);
   }
+};
+
+const queryData = ({ target }) => {
+  if (state.status === 'LOADING') return;
+
+  const utterance = (target.value || '').toLowerCase();
+  const dataWrap = document.querySelector('[data-collection-wrap]');
+  const devsLen = state.devs.length;
+  const queryStatus = getCountDisplay();
+  const ageStatus = getAgeDisplay();
+  if (utterance === '') {
+    dataWrap.classList.remove('filtered');
+    ageStatus().textContent = '';
+    queryStatus().textContent = `${devsLen} of ${devsLen}`;
+    return;
+  }
+
+  const parts = utterance.split(/&\s*/).map((q) => (q || '').trim());
+  const query = parts[parts.length - 1];
+  const isInValidQuery = query.length <= 2;
+
+  if (isInValidQuery) {
+    dataWrap.classList.remove('filtered');
+    ageStatus().textContent = '';
+    queryStatus().textContent = `${devsLen} of ${devsLen}`;
+    return;
+  }
+
+  const qHandler = state.queryHandlers.find(({ matcher }) => matcher
+    && matcher.test(query) === true);
+
+  if (!qHandler) {
+    dataWrap.classList.remove('filtered');
+    ageStatus().textContent = '';
+    queryStatus().textContent = `${devsLen} of ${devsLen}`;
+    return;
+  }
+
+  state.matched = [];
+  state.query = query;
+  state.queueIndex = 0;
+  state.processQueue = [];
+  state.queryHandler = qHandler.handler;
+
+  requestIdleCallback(processQuery);
 };
 
 const displayData = () => {
@@ -495,7 +488,7 @@ const displayData = () => {
   const nodes = domParser().parseFromString(queue.join(''), 'text/html');
 
   const content = getContentArea();
-  nodes.body.childNodes.forEach(n => {
+  nodes.body.childNodes.forEach((n) => {
     content().appendChild(n);
     iObserver.observe(n);
   });
@@ -503,7 +496,7 @@ const displayData = () => {
   requestAnimationFrame(displayData);
 };
 
-const timeIsRemaining = deadline => {
+const timeIsRemaining = (deadline) => {
   if (deadline && typeof deadline.timeRemaining === 'function') {
     // TODO 0.25 should be an intuitively named top-level constant
     // TODO if possible, expose what 0.25 represents to the UI and allow the user to control it
@@ -526,11 +519,11 @@ const enableSmartSearch = () => {
   searchField.focus();
 };
 
-const processData = deadline => {
+const processData = (deadline) => {
   state.status = 'LOADING';
   while (timeIsRemaining(deadline) && queueHasItems()) {
     state.processQueue.push(makeARow(state.devs[state.queueIndex]));
-    state.queueIndex++;
+    state.queueIndex += 1;
   }
 
   requestAnimationFrame(displayData);
@@ -544,7 +537,7 @@ const processData = deadline => {
 };
 
 const handleResponse = ([data]) => {
-    console.log('Received API data ...');
+  console.log('Received API data ...');
   const { developers } = data;
 
   state.devs = developers;
@@ -561,18 +554,10 @@ const fetchData = () => {
   const APIKey = 'b02322d7f185419feaab65646b807469';
   const endpoint = `${APIBase}/${APIKey}`;
 
-  //   try {
-  //     const response = await fetch(endpoint);
-  //     const { results } = await response.json();
-  //     handleResponse(results);
-  //   } catch (error) {
-  //     console.warm(error);
-  //   }
-
   fetch(endpoint)
-    .then(response => response.json())
+    .then((response) => response.json())
     .then(({ results }) => handleResponse(results))
-    .catch(error => console.log(error));
+    .catch((error) => console.log(error));
 };
 
 const startApp = () => {
