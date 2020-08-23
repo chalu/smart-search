@@ -550,9 +550,11 @@ const handleResponse = ([data]) => {
 };
 
 const fetchData = () => {
-  const APIBase = 'https://randomapi.com/api';
-  const APIKey = 'b02322d7f185419feaab65646b807469';
-  const endpoint = `${APIBase}/${APIKey}`;
+  const APIBase = 'https://randomapi.com/api/3qjlr7d4';
+  const APIKey = 'LEIX-GF3O-AG7I-6J84';
+
+  // TODO expose QTY from the UI
+  const endpoint = `${APIBase}?key=${APIKey}&qty=50`;
 
   fetch(endpoint)
     .then((response) => response.json())
