@@ -28,6 +28,8 @@
   9. Make this into a PWA, if it makes sense
 */
 
+import { log, useDOMSelector, getDomParser } from './ui-utils';
+
 const state = {};
 const months = [
   ['Jan', 'January'],
@@ -44,57 +46,12 @@ const months = [
   ['Dec', 'December']
 ];
 
-const getProgressBar = () => {
-  let pBar;
-  return () => {
-    if (pBar) return pBar;
-
-    pBar = document.querySelector('progress');
-    return pBar;
-  };
-};
-
-const pBar = getProgressBar();
-
-const getDomParser = () => {
-  let parser;
-  return () => {
-    if (parser) return parser;
-
-    parser = new DOMParser();
-    return parser;
-  };
-};
-
-const getContentArea = () => {
-  let root;
-  return () => {
-    if (root) return root;
-
-    root = document.querySelector('[data-collection-wrap]');
-    return root;
-  };
-};
-
-const getCountDisplay = () => {
-  let node;
-  return () => {
-    if (node) return node;
-
-    node = document.querySelector('[data-search-wrap] span:nth-child(1)');
-    return node;
-  };
-};
-
-const getAgeDisplay = () => {
-  let node;
-  return () => {
-    if (node) return node;
-
-    node = document.querySelector('[data-search-wrap] span:nth-child(2)');
-    return node;
-  };
-};
+const { select } = useDOMSelector();
+const progressBar = select('progress');
+const contentArea = select('[data-collection-wrap]');
+const ageDisplay = select('[data-search-wrap] span:nth-child(2)');
+const countDisplay = select('[data-search-wrap] span:nth-child(1)');
+const domParser = getDomParser();
 
 const iObserver = new IntersectionObserver((entries) => {
   const srcBackup = ({ target }) => {
@@ -135,8 +92,7 @@ const computeAges = (devIds = [], ages = {}) => {
   ages.avg = Math.round(ages.total / ages.count);
 
   requestAnimationFrame(() => {
-    const ageDisplay = getAgeDisplay();
-    ageDisplay().textContent = `Age: ~${ages.avg} | >=${ages.min} | <=${ages.max}`;
+    ageDisplay.textContent = `Age: ~${ages.avg} | >=${ages.min} | <=${ages.max}`;
   });
   return computeAges(devIds, ages);
 };
@@ -200,7 +156,7 @@ const skillByCompetency = () => {
       level = level.trim();
       const { fn } = opHndlr;
       status = fn(tag, level, tags);
-      // console.log(`match for ${dev.bio.name}: ${status}`);
+      // log(`match for ${dev.bio.name}: ${status}`);
     }
 
     return status;
@@ -333,7 +289,7 @@ const dobInQuarters = () => {
       qry = qry.trim();
       const { fn } = opHndlr;
       status = fn(qry, month);
-      // console.log(`match for ${dev.bio.name}: ${status}`);
+      // log(`match for ${dev.bio.name}: ${status}`);
     }
 
     return status;
@@ -368,13 +324,13 @@ const makeARow = (dev) => {
 const displayMatches = () => {
   const queue = state.processQueue.splice(0);
   if (queue.length <= 0) {
-    console.log(state.matched.length);
+    log(state.matched.length);
     computeAges(state.matched);
     return;
   }
 
   state.matched = [...state.matched, ...queue];
-  console.log(`Queue: ${queue.length}, Matched: ${state.matched.length}`);
+  log(`Queue: ${queue.length}, Matched: ${state.matched.length}`);
 
   const devDOM = [...document.querySelectorAll('.dev-item')];
   devDOM.forEach((div) => {
@@ -393,8 +349,7 @@ const displayMatches = () => {
 
   const matchedLen = state.matched.length;
   const dataWrap = document.querySelector('[data-collection-wrap]');
-  const recordStatus = getCountDisplay();
-  recordStatus().textContent = `${matchedLen} of ${state.devs.length}`;
+  countDisplay.textContent = `${matchedLen} of ${state.devs.length}`;
   if (matchedLen >= 1 && !dataWrap.classList.contains('filtered')) {
     dataWrap.classList.add('filtered');
   }
@@ -429,12 +384,10 @@ const queryData = ({ target }) => {
   const utterance = (target.value || '').toLowerCase();
   const dataWrap = document.querySelector('[data-collection-wrap]');
   const devsLen = state.devs.length;
-  const queryStatus = getCountDisplay();
-  const ageStatus = getAgeDisplay();
   if (utterance === '') {
     dataWrap.classList.remove('filtered');
-    ageStatus().textContent = '';
-    queryStatus().textContent = `${devsLen} of ${devsLen}`;
+    ageDisplay.textContent = '';
+    countDisplay.textContent = `${devsLen} of ${devsLen}`;
     return;
   }
 
@@ -444,8 +397,8 @@ const queryData = ({ target }) => {
 
   if (isInValidQuery) {
     dataWrap.classList.remove('filtered');
-    ageStatus().textContent = '';
-    queryStatus().textContent = `${devsLen} of ${devsLen}`;
+    ageDisplay.textContent = '';
+    countDisplay.textContent = `${devsLen} of ${devsLen}`;
     return;
   }
 
@@ -454,8 +407,8 @@ const queryData = ({ target }) => {
 
   if (!qHandler) {
     dataWrap.classList.remove('filtered');
-    ageStatus().textContent = '';
-    queryStatus().textContent = `${devsLen} of ${devsLen}`;
+    ageDisplay.textContent = '';
+    countDisplay.textContent = `${devsLen} of ${devsLen}`;
     return;
   }
 
@@ -470,26 +423,23 @@ const queryData = ({ target }) => {
 
 const displayData = () => {
   const queue = state.processQueue.splice(0);
-  console.log(`Load Queue: ${queue.length}`);
+  log(`Load Queue: ${queue.length}`);
 
   const devsLength = state.devs.length;
-  const recordStatus = getCountDisplay();
-  recordStatus().textContent = `${state.queueIndex} of ${devsLength}`;
+  countDisplay.textContent = `${state.queueIndex} of ${devsLength}`;
 
   if (state.queueIndex >= devsLength - 1) {
     // TODO `.classList.remove('on');` call means internal implementation details are leaking out
-    pBar().classList.remove('on');
+    progressBar.classList.remove('on');
   }
 
   if (queue.length <= 0) return;
 
-  pBar().value = state.queueIndex;
-  const domParser = getDomParser();
+  progressBar.value = state.queueIndex;
   const nodes = domParser().parseFromString(queue.join(''), 'text/html');
 
-  const content = getContentArea();
   nodes.body.childNodes.forEach((n) => {
-    content().appendChild(n);
+    contentArea.appendChild(n);
     iObserver.observe(n);
   });
 
@@ -537,15 +487,15 @@ const processData = (deadline) => {
 };
 
 const handleResponse = ([data]) => {
-  console.log('Received API data ...');
   const { developers } = data;
+  log(`Received ${developers.length} devs data ...`);
 
   state.devs = developers;
   state.queueIndex = 0;
   state.processQueue = [];
 
-  pBar().setAttribute('max', state.devs.length);
-  pBar().classList.add('on');
+  progressBar.setAttribute('max', state.devs.length);
+  progressBar.classList.add('on');
   requestIdleCallback(processData);
 };
 
@@ -559,7 +509,7 @@ const fetchData = () => {
   fetch(endpoint)
     .then((response) => response.json())
     .then(({ results }) => handleResponse(results))
-    .catch((error) => console.log(error));
+    .catch((error) => log(error));
 };
 
 const startApp = () => {
