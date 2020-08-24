@@ -495,18 +495,24 @@ const handleResponse = ([data]) => {
   state.processQueue = [];
 
   progressBar.setAttribute('max', state.devs.length);
-  progressBar.classList.add('on');
+  progressBar.value = 0;
   requestIdleCallback(processData);
 };
 
-const fetchData = () => {
+const fetchData = async () => {
+  const qty = 50;
   const APIBase = 'https://randomapi.com/api/3qjlr7d4';
   const APIKey = 'LEIX-GF3O-AG7I-6J84';
 
   // TODO expose QTY from the UI
-  const endpoint = `${APIBase}?key=${APIKey}&qty=50`;
+  const endpoint = `${APIBase}?key=${APIKey}&qty=${qty}`;
 
-  fetch(endpoint)
+  progressBar.setAttribute('max', qty);
+  progressBar.classList.add('on');
+
+  // TODO when we upgrade to streams, communicate
+  // fetch progress with the progress bar
+  return fetch(endpoint)
     .then((response) => response.json())
     .then(({ results }) => handleResponse(results))
     .catch((error) => log(error));
