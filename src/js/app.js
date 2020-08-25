@@ -30,7 +30,27 @@
 
 import { log, useDOMSelector, getDomParser } from './ui-utils';
 
-const state = {};
+const state = {
+  /**
+   * how much of the device's
+   * main-thread idle time should
+   * we use up. Default is 75%
+   */
+  idleTimeUsage: 0.75,
+
+  /**
+   * how many records should the
+   * app display at a given time
+   */
+  pageSize: 20,
+
+  /**
+   * how many developer records
+   * to fetch from the server.
+   * default is 3.5k
+   */
+  devQty: 50
+};
 const months = [
   ['Jan', 'January'],
   ['Feb', 'February'],
@@ -53,25 +73,25 @@ const ageDisplay = select('[data-search-wrap] span:nth-child(2)');
 const countDisplay = select('[data-search-wrap] span:nth-child(1)');
 const domParser = getDomParser();
 
-const iObserver = new IntersectionObserver((entries) => {
-  const srcBackup = ({ target }) => {
-    // TODO this can be a data-url if it helps to
-    // save bandwidth, latency e.t.c
-    target.src = 'https://placehold.it/48x48.png';
-  };
-  entries
-    .filter((e) => e.isIntersecting === true)
-    .forEach(({ target }) => {
-      // TODO consider un-observing the IMG elements as well
-      requestAnimationFrame(() => {
-        const img = target.querySelector('img');
-        if (img && !img.hasAttribute('src') && img.hasAttribute('data-src')) {
-          img.addEventListener('error', srcBackup);
-          img.setAttribute('src', img.getAttribute('data-src'));
-        }
-      });
-    });
-});
+// const iObserver = new IntersectionObserver((entries) => {
+//   const srcBackup = ({ target }) => {
+//     // TODO this can be a data-url if it helps to
+//     // save bandwidth, latency e.t.c
+//     target.src = 'https://placehold.it/48x48.png';
+//   };
+//   entries
+//     .filter((e) => e.isIntersecting === true)
+//     .forEach(({ target }) => {
+//       // TODO consider un-observing the IMG elements as well
+//       requestAnimationFrame(() => {
+//         const img = target.querySelector('img');
+//         if (img && !img.hasAttribute('src') && img.hasAttribute('data-src')) {
+//           img.addEventListener('error', srcBackup);
+//           img.setAttribute('src', img.getAttribute('data-src'));
+//         }
+//       });
+//     });
+// });
 
 const computeAges = (devIds = [], ages = {}) => {
   const { min, max, avg } = ages;
@@ -310,7 +330,7 @@ const makeARow = (dev) => {
   return `
     <div data-dev-id="${id}" class="dev-item">
         <div class="avatar">
-            <img data-src="${avatar}" title="${bio.name}" />
+            <img data-src="${avatar}" src="https://via.placeholder.com/64" title="${bio.name}" />
         </div>
         <div class="about">
             <p>${name}</p>
@@ -322,7 +342,7 @@ const makeARow = (dev) => {
 };
 
 const displayMatches = () => {
-  const queue = state.processQueue.splice(0);
+  const queue = state.jobQueue.splice(0);
   if (queue.length <= 0) {
     log(state.matched.length);
     computeAges(state.matched);
@@ -357,25 +377,30 @@ const displayMatches = () => {
   requestAnimationFrame(displayMatches);
 };
 
-const processQuery = (deadline) => {
-  while (
-    // TODO 0.75 should be an intuitively named top-level constant
+const timeIsRemaining = (deadline) => {
+  if (deadline && typeof deadline.timeRemaining === 'function') {
     // TODO if possible, expose what 0.75 represents to the UI and allow the user to control it
-    parseInt(deadline.timeRemaining() * 0.75, 10) > 0
-      && state.queueIndex < state.devs.length
-  ) {
+    return parseInt(deadline.timeRemaining() * state.idleTimeUsage, 10) > 0;
+  }
+  return false;
+};
+
+const queueHasItems = () => state.queueIndex < state.devs.length;
+
+const processQuery = (deadline) => {
+  while (timeIsRemaining(deadline) && queueHasItems()) {
     const dev = state.devs[state.queueIndex];
     const matched = state.queryHandler(state.query, dev);
     if (matched === true) {
-      state.processQueue.push(dev.id);
+      state.jobQueue.push(dev.id);
     }
     state.queueIndex += 1;
   }
 
   requestAnimationFrame(displayMatches);
-  if (state.queueIndex < state.devs.length) {
-    requestIdleCallback(processQuery);
-  }
+  if (!queueHasItems()) return;
+
+  requestIdleCallback(processQuery);
 };
 
 const queryData = ({ target }) => {
@@ -415,14 +440,14 @@ const queryData = ({ target }) => {
   state.matched = [];
   state.query = query;
   state.queueIndex = 0;
-  state.processQueue = [];
+  state.jobQueue = [];
   state.queryHandler = qHandler.handler;
 
   requestIdleCallback(processQuery);
 };
 
 const displayData = () => {
-  const queue = state.processQueue.splice(0);
+  const queue = state.jobQueue.splice(0);
   log(`Load Queue: ${queue.length}`);
 
   const devsLength = state.devs.length;
@@ -440,59 +465,51 @@ const displayData = () => {
 
   nodes.body.childNodes.forEach((n) => {
     contentArea.appendChild(n);
-    iObserver.observe(n);
+    // iObserver.observe(n);
   });
 
   requestAnimationFrame(displayData);
 };
 
-const timeIsRemaining = (deadline) => {
-  if (deadline && typeof deadline.timeRemaining === 'function') {
-    // TODO 0.25 should be an intuitively named top-level constant
-    // TODO if possible, expose what 0.25 represents to the UI and allow the user to control it
-    return parseInt(deadline.timeRemaining() * 0.25, 10) > 0;
-  }
-  return false;
-};
-
-const queueHasItems = () => state.queueIndex < state.devs.length;
-
+// TODO de-bounce search input
 const enableSmartSearch = () => {
-  state.queryHandlers = [];
-  state.queryHandlers.push(dobInMonthOrYear());
-  state.queryHandlers.push(dobInHalfAYear());
-  state.queryHandlers.push(dobInQuarters());
-  state.queryHandlers.push(skillByCompetency());
+  state.queryHandlers = [
+    dobInMonthOrYear(),
+    dobInHalfAYear(),
+    dobInQuarters(),
+    skillByCompetency()
+  ];
 
-  const searchField = document.querySelector('input');
+  const searchField = select('input');
   searchField.addEventListener('input', queryData);
   searchField.focus();
 };
 
 const processData = (deadline) => {
-  state.status = 'LOADING';
+  state.status = 'RENDERING';
   while (timeIsRemaining(deadline) && queueHasItems()) {
-    state.processQueue.push(makeARow(state.devs[state.queueIndex]));
+    state.jobQueue.push(makeARow(state.devs[state.queueIndex]));
     state.queueIndex += 1;
   }
 
   requestAnimationFrame(displayData);
-  if (queueHasItems()) {
-    requestIdleCallback(processData);
-    return;
+  if (state.queueIndex >= state.pageSize) {
+    state.status = 'READY';
+    enableSmartSearch();
   }
 
-  state.status = 'IDLE';
-  enableSmartSearch();
+  if (!queueHasItems()) return;
+
+  requestIdleCallback(processData);
 };
 
-const handleResponse = ([data]) => {
+const handleFecthResponse = ([data]) => {
   const { developers } = data;
   log(`Received ${developers.length} devs data ...`);
 
   state.devs = developers;
   state.queueIndex = 0;
-  state.processQueue = [];
+  state.jobQueue = [];
 
   progressBar.setAttribute('max', state.devs.length);
   progressBar.value = 0;
@@ -500,21 +517,21 @@ const handleResponse = ([data]) => {
 };
 
 const fetchData = async () => {
-  const qty = 50;
   const APIBase = 'https://randomapi.com/api/3qjlr7d4';
   const APIKey = 'LEIX-GF3O-AG7I-6J84';
 
   // TODO expose QTY from the UI
-  const endpoint = `${APIBase}?key=${APIKey}&qty=${qty}`;
+  const endpoint = `${APIBase}?key=${APIKey}&qty=${state.devQty}`;
 
-  progressBar.setAttribute('max', qty);
+  progressBar.setAttribute('max', state.devQty);
   progressBar.classList.add('on');
+  state.status = 'LOADING';
 
   // TODO when we upgrade to streams, communicate
   // fetch progress with the progress bar
   return fetch(endpoint)
     .then((response) => response.json())
-    .then(({ results }) => handleResponse(results))
+    .then(({ results }) => handleFecthResponse(results))
     .catch((error) => log(error));
 };
 
