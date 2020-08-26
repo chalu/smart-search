@@ -28,29 +28,15 @@
   9. Make this into a PWA, if it makes sense
 */
 
-import { log, useDOMSelector, getDomParser } from './ui-utils';
+/* eslint-disable import/extensions */
+/* eslint-disable import/no-unresolved */
 
-const state = {
-  /**
-   * how much of the device's
-   * main-thread idle time should
-   * we use up. Default is 75%
-   */
-  idleTimeUsage: 0.75,
+// import { wrap } from 'https://unpkg.com/comlink@4.3.0/dist/esm/comlink.mjs';
+// import { wrap } from 'comlink';
 
-  /**
-   * how many records should the
-   * app display at a given time
-   */
-  pageSize: 20,
+import OMT from './omt.js';
+import { log, useDOMSelector, getDomParser } from './ui-utils.js';
 
-  /**
-   * how many developer records
-   * to fetch from the server.
-   * default is 3.5k
-   */
-  devQty: 50
-};
 const months = [
   ['Jan', 'January'],
   ['Feb', 'February'],
@@ -66,6 +52,33 @@ const months = [
   ['Dec', 'December']
 ];
 
+const uiState = {
+  /**
+   * how much of the device's
+   * main-thread idle time should
+   * we use up. Default is 75%
+   */
+  idleTimeUsage: 0.75,
+
+  /**
+   * how many records should the
+   * app display at a given time
+   */
+  pageSize: 10,
+
+  /**
+   * how many developer records
+   * to fetch from the server.
+   * default is 3.5k
+   */
+  devQty: 50,
+
+  queueIndex: 0,
+
+  jobQueue: []
+};
+
+// let OMT;
 const { select } = useDOMSelector();
 const progressBar = select('progress');
 const contentArea = select('[data-collection-wrap]');
@@ -99,7 +112,7 @@ const computeAges = (devIds = [], ages = {}) => {
   const id = devIds.shift();
   if (!id) return { min, max, avg };
 
-  const dev = id ? state.devs.find((d) => d.id === id) : undefined;
+  const dev = id ? uiState.devs.find((d) => d.id === id) : undefined;
   if (!dev) return { min, max, avg };
 
   const yob = new Date(dev.bio.dob).getFullYear();
@@ -151,8 +164,8 @@ const skillByCompetency = () => {
         if (levelWeight < 0) return false;
 
         const found = skillGraph.find(
-          ({ skill, competence = '' }) => tag
-            === skill.toLowerCase() && weightedLevels.indexOf(competence) >= levelWeight
+          ({ skill, competence = '' }) =>
+            tag === skill.toLowerCase() && weightedLevels.indexOf(competence) >= levelWeight
         );
         return found !== undefined;
       }
@@ -255,13 +268,14 @@ const dobInQuarters = () => {
     },
     {
       key: /^!=$/,
-      fn: (q, m) => (qtrs
-        .filter(({ key }) => !key.test(`${q}`))
-        .map(({ data }) => {
-          const [start, end] = data;
-          return m >= start && m <= end;
-        })
-        .includes(true))
+      fn: (q, m) =>
+        qtrs
+          .filter(({ key }) => !key.test(`${q}`))
+          .map(({ data }) => {
+            const [start, end] = data;
+            return m >= start && m <= end;
+          })
+          .includes(true)
     },
     {
       key: /^>=$/,
@@ -318,14 +332,8 @@ const dobInQuarters = () => {
   return { matcher: queryMatcher, handler: queryHandler };
 };
 
-const makeARow = (dev) => {
-  const {
-    id, avatar, bio, country
-  } = dev;
-
-  const dob = new Date(bio.dob);
-  const names = bio.name.split(' ');
-  const name = `${names[0]} ${names[1].charAt(0).toUpperCase()}.`;
+const devToDOM = (dev) => {
+  const { id, avatar, bio, country } = dev;
 
   return `
     <div data-dev-id="${id}" class="dev-item">
@@ -333,8 +341,8 @@ const makeARow = (dev) => {
             <img data-src="${avatar}" src="https://via.placeholder.com/64" title="${bio.name}" />
         </div>
         <div class="about">
-            <p>${name}</p>
-            <p>${months[dob.getMonth()][0]}, ${dob.getFullYear()}</p>
+            <p>${bio.shortName}</p>
+            <p>${bio.mob[0]}, ${bio.yob}</p>
             <p>${country}</p>
         </div>
     </div>
@@ -342,20 +350,20 @@ const makeARow = (dev) => {
 };
 
 const displayMatches = () => {
-  const queue = state.jobQueue.splice(0);
+  const queue = uiState.jobQueue.splice(0);
   if (queue.length <= 0) {
-    log(state.matched.length);
-    computeAges(state.matched);
+    log(uiState.matched.length);
+    computeAges(uiState.matched);
     return;
   }
 
-  state.matched = [...state.matched, ...queue];
-  log(`Queue: ${queue.length}, Matched: ${state.matched.length}`);
+  uiState.matched = [...uiState.matched, ...queue];
+  log(`Queue: ${queue.length}, Matched: ${uiState.matched.length}`);
 
   const devDOM = [...document.querySelectorAll('.dev-item')];
   devDOM.forEach((div) => {
     const id = div.dataset.devId;
-    if (id && !state.matched.includes(id)) {
+    if (id && !uiState.matched.includes(id)) {
       div.classList.remove('matched');
     }
   });
@@ -367,9 +375,9 @@ const displayMatches = () => {
     }
   });
 
-  const matchedLen = state.matched.length;
+  const matchedLen = uiState.matched.length;
   const dataWrap = document.querySelector('[data-collection-wrap]');
-  countDisplay.textContent = `${matchedLen} of ${state.devs.length}`;
+  countDisplay.textContent = `${matchedLen} of ${uiState.devs.length}`;
   if (matchedLen >= 1 && !dataWrap.classList.contains('filtered')) {
     dataWrap.classList.add('filtered');
   }
@@ -380,21 +388,24 @@ const displayMatches = () => {
 const timeIsRemaining = (deadline) => {
   if (deadline && typeof deadline.timeRemaining === 'function') {
     // TODO if possible, expose what 0.75 represents to the UI and allow the user to control it
-    return parseInt(deadline.timeRemaining() * state.idleTimeUsage, 10) > 0;
+    return parseInt(deadline.timeRemaining() * uiState.idleTimeUsage, 10) > 0;
   }
   return false;
 };
 
-const queueHasItems = () => state.queueIndex < state.devs.length;
+const queueHasItems = () => uiState.devsToRender
+  && uiState.queueIndex < uiState.devsToRender.length;
+
+const firstPageIsReady = () => uiState.queueIndex >= uiState.pageSize;
 
 const processQuery = (deadline) => {
   while (timeIsRemaining(deadline) && queueHasItems()) {
-    const dev = state.devs[state.queueIndex];
-    const matched = state.queryHandler(state.query, dev);
+    const dev = uiState.devs[uiState.queueIndex];
+    const matched = uiState.queryHandler(uiState.query, dev);
     if (matched === true) {
-      state.jobQueue.push(dev.id);
+      uiState.jobQueue.push(dev.id);
     }
-    state.queueIndex += 1;
+    uiState.queueIndex += 1;
   }
 
   requestAnimationFrame(displayMatches);
@@ -404,11 +415,11 @@ const processQuery = (deadline) => {
 };
 
 const queryData = ({ target }) => {
-  if (state.status === 'LOADING') return;
+  if (uiState.status === 'LOADING') return;
 
   const utterance = (target.value || '').toLowerCase();
   const dataWrap = document.querySelector('[data-collection-wrap]');
-  const devsLen = state.devs.length;
+  const devsLen = uiState.devs.length;
   if (utterance === '') {
     dataWrap.classList.remove('filtered');
     ageDisplay.textContent = '';
@@ -427,8 +438,7 @@ const queryData = ({ target }) => {
     return;
   }
 
-  const qHandler = state.queryHandlers.find(({ matcher }) => matcher
-    && matcher.test(query) === true);
+  const qHandler = uiState.queryHandlers.find(({ matcher }) => matcher && matcher.test(query) === true);
 
   if (!qHandler) {
     dataWrap.classList.remove('filtered');
@@ -437,30 +447,30 @@ const queryData = ({ target }) => {
     return;
   }
 
-  state.matched = [];
-  state.query = query;
-  state.queueIndex = 0;
-  state.jobQueue = [];
-  state.queryHandler = qHandler.handler;
+  uiState.matched = [];
+  uiState.query = query;
+  uiState.queueIndex = 0;
+  uiState.jobQueue = [];
+  uiState.queryHandler = qHandler.handler;
 
   requestIdleCallback(processQuery);
 };
 
 const displayData = () => {
-  const queue = state.jobQueue.splice(0);
+  const queue = uiState.jobQueue.splice(0);
   log(`Load Queue: ${queue.length}`);
 
-  const devsLength = state.devs.length;
-  countDisplay.textContent = `${state.queueIndex} of ${devsLength}`;
+  // const devsLength = uiState.devs.length;
+  // countDisplay.textContent = `${uiState.queueIndex} of ${devsLength}`;
 
-  if (state.queueIndex >= devsLength - 1) {
+  if (firstPageIsReady()) {
     // TODO `.classList.remove('on');` call means internal implementation details are leaking out
     progressBar.classList.remove('on');
   }
 
   if (queue.length <= 0) return;
 
-  progressBar.value = state.queueIndex;
+  progressBar.value = uiState.queueIndex;
   const nodes = domParser().parseFromString(queue.join(''), 'text/html');
 
   nodes.body.childNodes.forEach((n) => {
@@ -473,12 +483,7 @@ const displayData = () => {
 
 // TODO de-bounce search input
 const enableSmartSearch = () => {
-  state.queryHandlers = [
-    dobInMonthOrYear(),
-    dobInHalfAYear(),
-    dobInQuarters(),
-    skillByCompetency()
-  ];
+  uiState.queryHandlers = [dobInMonthOrYear(), dobInHalfAYear(), dobInQuarters(), skillByCompetency()];
 
   const searchField = select('input');
   searchField.addEventListener('input', queryData);
@@ -486,46 +491,47 @@ const enableSmartSearch = () => {
 };
 
 const processData = (deadline) => {
-  state.status = 'RENDERING';
+  // uiState.status = 'RENDERING';
   while (timeIsRemaining(deadline) && queueHasItems()) {
-    state.jobQueue.push(makeARow(state.devs[state.queueIndex]));
-    state.queueIndex += 1;
+    const dev = uiState.devsToRender.shift();
+    uiState.jobQueue.push(dev.domString);
+    uiState.queueIndex += 1;
   }
 
   requestAnimationFrame(displayData);
-  if (state.queueIndex >= state.pageSize) {
-    state.status = 'READY';
+  if (firstPageIsReady()) {
+    // uiState.status = 'READY';
     enableSmartSearch();
   }
 
   if (!queueHasItems()) return;
-
   requestIdleCallback(processData);
 };
 
-const handleFecthResponse = ([data]) => {
+const handleFecthResponse = async ([data]) => {
   const { developers } = data;
   log(`Received ${developers.length} devs data ...`);
 
-  state.devs = developers;
-  state.queueIndex = 0;
-  state.jobQueue = [];
-
-  progressBar.setAttribute('max', state.devs.length);
+  const startDevs = developers.slice(0, uiState.pageSize * 2);
+  progressBar.setAttribute('max', startDevs.length);
   progressBar.value = 0;
+
+  const { developers: devsToRender } = await OMT.processStartDevs({ startDevs });
+  uiState.devsToRender = devsToRender.slice();
   requestIdleCallback(processData);
+  // TODO process the remaining dev records
 };
 
 const fetchData = async () => {
   const APIBase = 'https://randomapi.com/api/3qjlr7d4';
   const APIKey = 'LEIX-GF3O-AG7I-6J84';
 
-  // TODO expose QTY from the UI
-  const endpoint = `${APIBase}?key=${APIKey}&qty=${state.devQty}`;
+  // TODO expose devQty from the UI
+  const endpoint = `${APIBase}?key=${APIKey}&qty=${uiState.devQty}`;
 
-  progressBar.setAttribute('max', state.devQty);
+  progressBar.setAttribute('max', uiState.devQty);
   progressBar.classList.add('on');
-  state.status = 'LOADING';
+  // uiState.status = 'LOADING';
 
   // TODO when we upgrade to streams, communicate
   // fetch progress with the progress bar
@@ -539,6 +545,7 @@ const startApp = () => {
   // TODO the query field should get focus when the app loads
   // TODO consider allowing search input even before data arrives, especially on very slow networks
   // TODO respect data-saver settings and dont fetch images in 2G connections
+  // OMT = wrap(new Worker('./js/omt.js', { type: 'module' }));
   fetchData();
 };
 
