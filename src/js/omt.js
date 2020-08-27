@@ -6,7 +6,7 @@ import { produce } from 'immer';
 
 // enableAllPlugins();
 
-const state = {
+let state = {
   staging: [],
   developers: {}
 };
@@ -72,27 +72,28 @@ const makeDevs = (devs, sink) => devs.reduce((processed, dev) => {
   return processed;
 }, sink);
 
-const processDeveloperData = async (payload) => {
-  const { developers, pageSize, isFirstPage = false } = payload;
+const processDeveloperData = async (payload = {}) => {
+  const { pageSize, developers = [], isFirstPage = false } = payload;
 
   let devs = developers;
   if (isFirstPage === true) {
     devs = developers.slice(0, pageSize);
-    const processed = produce(state, (draft) => {
+    state = produce(state, (draft) => {
       makeDevs(devs, draft.developers);
       draft.staging = developers.slice(pageSize);
     });
-    const devsToRender = Object.values(processed.developers).map((d) => d.domString);
+
+    const devsToRender = Object.values(state.developers).map((d) => d.domString);
     return { devsToRender };
   }
 
-  produce(state, (draft) => {
+  state = produce(state, (draft) => {
     if (draft.staging.length > 0) devs = [...draft.staging, ...devs];
-
     makeDevs(devs, draft.developers);
     draft.staging = [];
   });
-  return { developers: ['call the API!'] };
+
+  return { devsCount: Object.keys(state.developers).length };
 };
 
 /**

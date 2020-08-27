@@ -37,20 +37,20 @@
 import OMT from './omt.js';
 import { log, useDOMSelector, getDomParser } from './ui-utils.js';
 
-const months = [
-  ['Jan', 'January'],
-  ['Feb', 'February'],
-  ['Mar', 'March'],
-  ['Apr', 'April'],
-  ['May', 'May'],
-  ['Jun', 'June'],
-  ['Jul', 'July'],
-  ['Aug', 'August'],
-  ['Sept', 'September'],
-  ['Oct', 'October'],
-  ['Nov', 'November'],
-  ['Dec', 'December']
-];
+// const months = [
+//   ['Jan', 'January'],
+//   ['Feb', 'February'],
+//   ['Mar', 'March'],
+//   ['Apr', 'April'],
+//   ['May', 'May'],
+//   ['Jun', 'June'],
+//   ['Jul', 'July'],
+//   ['Aug', 'August'],
+//   ['Sept', 'September'],
+//   ['Oct', 'October'],
+//   ['Nov', 'November'],
+//   ['Dec', 'December']
+// ];
 
 const uiState = {
   /**
@@ -83,24 +83,24 @@ const uiState = {
 
   // jobQueue: [],
 
-  loadQueue: [],
+  // loadQueue: [],
 
-  loadQueueIndex: 0,
+  // loadQueueIndex: 0,
 
-  searchQueue: [],
+  // searchQueue: [],
 
-  searchQueueIndex: [],
+  // searchQueueIndex: [],
 
   searchDebouncer: undefined
 };
 
 // let OMT;
+const domParser = getDomParser();
 const { select } = useDOMSelector();
 const progressBar = select('progress');
 const contentArea = select('[data-collection-wrap]');
 const ageDisplay = select('[data-search-wrap] span:nth-child(2)');
 const countDisplay = select('[data-search-wrap] span:nth-child(1)');
-const domParser = getDomParser();
 
 // const iObserver = new IntersectionObserver((entries) => {
 //   const srcBackup = ({ target }) => {
@@ -122,29 +122,29 @@ const domParser = getDomParser();
 //     });
 // });
 
-const computeAges = (devIds = [], ages = {}) => {
-  const { min, max, avg } = ages;
+// const computeAges = (devIds = [], ages = {}) => {
+//   const { min, max, avg } = ages;
 
-  const id = devIds.shift();
-  if (!id) return { min, max, avg };
+//   const id = devIds.shift();
+//   if (!id) return { min, max, avg };
 
-  const dev = id ? uiState.devs.find((d) => d.id === id) : undefined;
-  if (!dev) return { min, max, avg };
+//   const dev = id ? uiState.devs.find((d) => d.id === id) : undefined;
+//   if (!dev) return { min, max, avg };
 
-  const yob = new Date(dev.bio.dob).getFullYear();
-  const thisYr = new Date().getFullYear();
-  const age = thisYr - yob;
-  ages.min = Math.min(ages.min || Number.POSITIVE_INFINITY, age);
-  ages.max = Math.max(ages.max || 0, age);
-  ages.total = (ages.total || 0) + age;
-  ages.count = (ages.count || 0) + 1;
-  ages.avg = Math.round(ages.total / ages.count);
+//   const yob = new Date(dev.bio.dob).getFullYear();
+//   const thisYr = new Date().getFullYear();
+//   const age = thisYr - yob;
+//   ages.min = Math.min(ages.min || Number.POSITIVE_INFINITY, age);
+//   ages.max = Math.max(ages.max || 0, age);
+//   ages.total = (ages.total || 0) + age;
+//   ages.count = (ages.count || 0) + 1;
+//   ages.avg = Math.round(ages.total / ages.count);
 
-  requestAnimationFrame(() => {
-    ageDisplay.textContent = `Age: ~${ages.avg} | >=${ages.min} | <=${ages.max}`;
-  });
-  return computeAges(devIds, ages);
-};
+//   requestAnimationFrame(() => {
+//     ageDisplay.textContent = `Age: ~${ages.avg} | >=${ages.min} | <=${ages.max}`;
+//   });
+//   return computeAges(devIds, ages);
+// };
 
 const skillByCompetency = () => {
   const matcher = /^#[a-z]+\s*(=|>=|<=|!=)\s*[a-z ]+$/i;
@@ -490,8 +490,9 @@ const renderAPage = () => {
     contentArea.appendChild(node);
     // iObserver.observe(n);
   });
+
   progressBar.classList.remove('on');
-  uiState.devsToRender = [];
+  countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
 };
 
 const runQuery = async (input) => {
@@ -551,26 +552,6 @@ const enableSmartSearch = () => {
   }, 3000);
 };
 
-// const processFetchData = (deadline) => {
-//   // uiState.status = 'RENDERING';
-//   while (timeIsRemaining(deadline) && loadQueueHasItems()) {
-//     // TODO order in devsToRender does not really matter
-//     // since .shift() is O(n), consider using .pop() if it makes sense
-//     const dev = uiState.devsToRender.shift();
-//     uiState.loadQueue.push(dev.domString);
-//     uiState.loadQueueIndex += 1;
-//   }
-
-//   requestAnimationFrame(displayData);
-//   if (firstPageIsReady()) {
-//     // uiState.status = 'READY';
-//     enableSmartSearch();
-//   }
-
-//   if (!loadQueueHasItems()) return;
-//   requestIdleCallback(processFetchData);
-// };
-
 const handleFecthResponse = async ([data]) => {
   const { developers } = data;
   progressBar.value = developers.length;
@@ -583,11 +564,14 @@ const handleFecthResponse = async ([data]) => {
     uiState.allDevsCount += devsToRender.length;
     requestAnimationFrame(renderAPage);
     enableSmartSearch();
+    uiState.displayedFirstPage = true;
   }
 
-  // TODO process the remaining dev records
-  // and update uiState.allDevsCount
-  uiState.allDevsCount += 0;
+  const { devsCount } = await OMT.processDeveloperData();
+  uiState.allDevsCount += (devsCount - uiState.pageSize);
+  requestAnimationFrame(() => {
+    countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
+  });
 };
 
 const fetchData = async () => {
