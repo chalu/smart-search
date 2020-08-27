@@ -37,21 +37,6 @@
 import OMT from './omt.js';
 import { log, useDOMSelector, getDomParser } from './ui-utils.js';
 
-// const months = [
-//   ['Jan', 'January'],
-//   ['Feb', 'February'],
-//   ['Mar', 'March'],
-//   ['Apr', 'April'],
-//   ['May', 'May'],
-//   ['Jun', 'June'],
-//   ['Jul', 'July'],
-//   ['Aug', 'August'],
-//   ['Sept', 'September'],
-//   ['Oct', 'October'],
-//   ['Nov', 'November'],
-//   ['Dec', 'December']
-// ];
-
 const uiState = {
   /**
    * how much of the device's
@@ -79,18 +64,6 @@ const uiState = {
 
   displayedFirstPage: false,
 
-  // queueIndex: 0,
-
-  // jobQueue: [],
-
-  // loadQueue: [],
-
-  // loadQueueIndex: 0,
-
-  // searchQueue: [],
-
-  // searchQueueIndex: [],
-
   searchDebouncer: undefined
 };
 
@@ -99,7 +72,7 @@ const domParser = getDomParser();
 const { select } = useDOMSelector();
 const progressBar = select('progress');
 const contentArea = select('[data-collection-wrap]');
-const ageDisplay = select('[data-search-wrap] span:nth-child(2)');
+// const ageDisplay = select('[data-search-wrap] span:nth-child(2)');
 const countDisplay = select('[data-search-wrap] span:nth-child(1)');
 
 // const iObserver = new IntersectionObserver((entries) => {
@@ -122,29 +95,29 @@ const countDisplay = select('[data-search-wrap] span:nth-child(1)');
 //     });
 // });
 
-// const computeAges = (devIds = [], ages = {}) => {
-//   const { min, max, avg } = ages;
+const computeAges = (devIds = [], ages = {}) => {
+  const { min, max, avg } = ages;
 
-//   const id = devIds.shift();
-//   if (!id) return { min, max, avg };
+  const id = devIds.shift();
+  if (!id) return { min, max, avg };
 
-//   const dev = id ? uiState.devs.find((d) => d.id === id) : undefined;
-//   if (!dev) return { min, max, avg };
+  const dev = id ? uiState.devs.find((d) => d.id === id) : undefined;
+  if (!dev) return { min, max, avg };
 
-//   const yob = new Date(dev.bio.dob).getFullYear();
-//   const thisYr = new Date().getFullYear();
-//   const age = thisYr - yob;
-//   ages.min = Math.min(ages.min || Number.POSITIVE_INFINITY, age);
-//   ages.max = Math.max(ages.max || 0, age);
-//   ages.total = (ages.total || 0) + age;
-//   ages.count = (ages.count || 0) + 1;
-//   ages.avg = Math.round(ages.total / ages.count);
+  const yob = new Date(dev.bio.dob).getFullYear();
+  const thisYr = new Date().getFullYear();
+  const age = thisYr - yob;
+  ages.min = Math.min(ages.min || Number.POSITIVE_INFINITY, age);
+  ages.max = Math.max(ages.max || 0, age);
+  ages.total = (ages.total || 0) + age;
+  ages.count = (ages.count || 0) + 1;
+  ages.avg = Math.round(ages.total / ages.count);
 
-//   requestAnimationFrame(() => {
-//     ageDisplay.textContent = `Age: ~${ages.avg} | >=${ages.min} | <=${ages.max}`;
-//   });
-//   return computeAges(devIds, ages);
-// };
+  requestAnimationFrame(() => {
+    ageDisplay.textContent = `Age: ~${ages.avg} | >=${ages.min} | <=${ages.max}`;
+  });
+  return computeAges(devIds, ages);
+};
 
 const skillByCompetency = () => {
   const matcher = /^#[a-z]+\s*(=|>=|<=|!=)\s*[a-z ]+$/i;
@@ -392,11 +365,6 @@ const dobInQuarters = () => {
 //   return false;
 // };
 
-// const loadQueueHasItems = () => uiState.loadQueueIndex < uiState.devsToRender.length;
-// const searchQueueHasItems = () => uiState.searchQueueIndex < uiState.allDevsCount.length;
-
-// const firstPageIsReady = () => uiState.queueIndex >= uiState.pageSize;
-
 // const processQuery = (deadline) => {
 //   while (timeIsRemaining(deadline) && searchQueueHasItems()) {
 //     const dev = uiState.devs[uiState.queueIndex];
@@ -414,7 +382,6 @@ const dobInQuarters = () => {
 // };
 
 // const queryData = (input) => {
-//   // if (uiState.status === 'LOADING') return;
 
 //   const utterance = input.toLowerCase();
 //   const dataWrap = document.querySelector('[data-collection-wrap]');
@@ -455,31 +422,6 @@ const dobInQuarters = () => {
 //   // requestIdleCallback(processQuery);
 // };
 
-// const displayData = () => {
-//   const queue = uiState.jobQueue.splice(0);
-//   log(`Load Queue: ${queue.length}`);
-
-//   // const devsLength = uiState.devs.length;
-//   // countDisplay.textContent = `${uiState.queueIndex} of ${devsLength}`;
-
-//   if (firstPageIsReady()) {
-//     // TODO `.classList.remove('on');` call means internal implementation details are leaking out
-//     progressBar.classList.remove('on');
-//   }
-
-//   if (queue.length <= 0) return;
-
-//   progressBar.value = uiState.queueIndex;
-//   const nodes = domParser().parseFromString(queue.join(''), 'text/html');
-
-//   nodes.body.childNodes.forEach((n) => {
-//     contentArea.appendChild(n);
-//     // iObserver.observe(n);
-//   });
-
-//   requestAnimationFrame(displayData);
-// };
-
 const renderAPage = () => {
   const items = uiState.devsToRender.slice();
   if (items.length <= 0) return;
@@ -497,8 +439,8 @@ const renderAPage = () => {
 
 const runQuery = async (input) => {
   const userInput = input.toLowerCase();
-  uiState.devsToRender = await OMT.runQuery(userInput);
-  requestIdleCallback(renderAPage);
+  // uiState.devsToRender = await OMT.runQuery(userInput);
+  // requestIdleCallback(renderAPage);
 };
 
 let queryPromise = Promise.resolve();
@@ -583,7 +525,6 @@ const fetchData = async () => {
 
   progressBar.setAttribute('max', uiState.devQty);
   progressBar.classList.add('on');
-  // uiState.status = 'LOADING';
 
   // TODO when we upgrade to streams, communicate
   // fetch progress with the progress bar
