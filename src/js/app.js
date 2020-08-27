@@ -495,13 +495,17 @@ const enableSmartSearch = () => {
     '',
     'make your move ...',
     'start by typing @ or #',
-    'there\'s so much you can do'
+    'there\'s so much you can do',
+    ''
   ];
 
   const endTourOnClick = () => {
     if (tourId) {
       clearInterval(tourId);
       tourIndex = 0;
+      requestAnimationFrame(() => {
+        searchField.setAttribute('placeholder', '');
+      });
     }
   };
   searchField.addEventListener('click', endTourOnClick);
