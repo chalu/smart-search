@@ -73,9 +73,21 @@ const uiState = {
    */
   devQty: 50,
 
-  queueIndex: 0,
+  devsToRender: [],
 
-  jobQueue: [],
+  allDevsCount: 0,
+
+  // queueIndex: 0,
+
+  // jobQueue: [],
+
+  loadQueue: [],
+
+  loadQueueIndex: 0,
+
+  searchQueue: [],
+
+  searchQueueIndex: [],
 
   searchDebouncer: undefined
 };
@@ -378,13 +390,13 @@ const timeIsRemaining = (deadline) => {
   return false;
 };
 
-const queueHasItems = () => uiState.devsToRender
-  && uiState.queueIndex < uiState.devsToRender.length;
+const loadQueueHasItems = () => uiState.loadQueueIndex < uiState.devsToRender.length;
+const searchQueueHasItems = () => uiState.searchQueueIndex < uiState.allDevsCount.length;
 
 const firstPageIsReady = () => uiState.queueIndex >= uiState.pageSize;
 
 const processQuery = (deadline) => {
-  while (timeIsRemaining(deadline) && queueHasItems()) {
+  while (timeIsRemaining(deadline) && searchQueueHasItems()) {
     const dev = uiState.devs[uiState.queueIndex];
     const matched = uiState.queryHandler(uiState.query, dev);
     if (matched === true) {
@@ -394,7 +406,7 @@ const processQuery = (deadline) => {
   }
 
   requestAnimationFrame(displayMatches);
-  if (!queueHasItems()) return;
+  if (!searchQueueHasItems()) return;
 
   requestIdleCallback(processQuery);
 };
@@ -434,11 +446,11 @@ const queryData = (input) => {
 
   uiState.matched = [];
   uiState.query = query;
-  uiState.queueIndex = 0;
-  uiState.jobQueue = [];
+  // uiState.queueIndex = 0;
+  // uiState.jobQueue = [];
   uiState.queryHandler = qHandler.handler;
 
-  requestIdleCallback(processQuery);
+  // requestIdleCallback(processQuery);
 };
 
 const displayData = () => {
@@ -511,14 +523,14 @@ const enableSmartSearch = () => {
   }, 3000);
 };
 
-const processData = (deadline) => {
+const processFetchData = (deadline) => {
   // uiState.status = 'RENDERING';
-  while (timeIsRemaining(deadline) && queueHasItems()) {
+  while (timeIsRemaining(deadline) && loadQueueHasItems()) {
     // TODO order in devsToRender does not really matter
     // since .shift() is O(n), consider using .pop() if it makes sense
     const dev = uiState.devsToRender.shift();
-    uiState.jobQueue.push(dev.domString);
-    uiState.queueIndex += 1;
+    uiState.loadQueue.push(dev.domString);
+    uiState.loadQueueIndex += 1;
   }
 
   requestAnimationFrame(displayData);
@@ -527,8 +539,8 @@ const processData = (deadline) => {
     enableSmartSearch();
   }
 
-  if (!queueHasItems()) return;
-  requestIdleCallback(processData);
+  if (!loadQueueHasItems()) return;
+  requestIdleCallback(processFetchData);
 };
 
 const handleFecthResponse = async ([data]) => {
@@ -544,9 +556,12 @@ const handleFecthResponse = async ([data]) => {
   // devsToRender is frozen by immer
   // make a copy so that processData can mutate it
   uiState.devsToRender = devsToRender.slice();
-  requestIdleCallback(processData);
+  uiState.allDevsCount += devsToRender.length;
+  requestIdleCallback(processFetchData);
 
   // TODO process the remaining dev records
+  // and update uiState.allDevsCount
+  uiState.allDevsCount += 0;
 };
 
 const fetchData = async () => {
