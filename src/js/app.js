@@ -488,6 +488,30 @@ const enableSmartSearch = () => {
   const searchField = select('input');
   searchField.addEventListener('input', queryData);
   searchField.focus();
+
+  let tourId;
+  let tourIndex = 0;
+  const tour = [
+    '',
+    'make your move ...',
+    'start by typing @ or #',
+    'there\'s so much you can do'
+  ];
+
+  const endTourOnClick = () => {
+    if (tourId) {
+      clearInterval(tourId);
+      tourIndex = 0;
+    }
+  };
+  searchField.addEventListener('click', endTourOnClick);
+
+  tourId = setInterval(() => {
+    requestAnimationFrame(() => {
+      searchField.setAttribute('placeholder', tour[tourIndex]);
+      tourIndex = (tourIndex + 1) % tour.length;
+    });
+  }, 3000);
 };
 
 const processData = (deadline) => {
