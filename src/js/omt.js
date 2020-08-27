@@ -7,7 +7,8 @@ import { produce } from 'immer';
 // enableAllPlugins();
 
 const state = {
-  developers: []
+  staging: [],
+  developers: {}
 };
 
 const months = [
@@ -26,7 +27,9 @@ const months = [
 ];
 
 const devToDOMString = (dev) => {
-  const { id, avatar, bio, country } = dev;
+  const {
+    id, avatar, bio, country
+  } = dev;
 
   const dob = new Date(bio.dob);
   const names = bio.name.split(' ');
@@ -64,19 +67,39 @@ const dataToDev = (dev) => {
   return dev;
 };
 
-const processStartDevs = async ({ startDevs }) => produce(state, (draft) => {
-  const sink = new Array(startDevs.length);
-  draft.developers = startDevs.reduce((processed, dev, index) => {
-    processed[index] = dataToDev(dev);
-    return processed;
-  }, sink);
-});
+const makeDevs = (devs, sink) => devs.reduce((processed, dev) => {
+  if (dev) processed[dev.id] = dataToDev(dev);
+  return processed;
+}, sink);
+
+const processDeveloperData = async (payload) => {
+  const { developers, pageSize, isFirstPage = false } = payload;
+
+  let devs = developers;
+  if (isFirstPage === true) {
+    devs = developers.slice(0, pageSize);
+    const processed = produce(state, (draft) => {
+      makeDevs(devs, draft.developers);
+      draft.staging = developers.slice(pageSize);
+    });
+    const devsToRender = Object.values(processed.developers).map((d) => d.domString);
+    return { devsToRender };
+  }
+
+  produce(state, (draft) => {
+    if (draft.staging.length > 0) devs = [...draft.staging, ...devs];
+
+    makeDevs(devs, draft.developers);
+    draft.staging = [];
+  });
+  return { developers: ['call the API!'] };
+};
 
 /**
  * exposed Analyzer "API"
  */
 const OMTInterface = {
-  processStartDevs
+  processDeveloperData
 };
 
 export default OMTInterface;

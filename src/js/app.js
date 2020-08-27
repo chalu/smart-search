@@ -77,6 +77,8 @@ const uiState = {
 
   allDevsCount: 0,
 
+  displayedFirstPage: false,
+
   // queueIndex: 0,
 
   // jobQueue: [],
@@ -346,145 +348,171 @@ const dobInQuarters = () => {
   return { matcher: queryMatcher, handler: queryHandler };
 };
 
-const displayMatches = () => {
-  const queue = uiState.jobQueue.splice(0);
-  if (queue.length <= 0) {
-    log(uiState.matched.length);
-    computeAges(uiState.matched);
-    return;
-  }
+// const displayMatches = () => {
+//   const queue = uiState.jobQueue.splice(0);
+//   if (queue.length <= 0) {
+//     log(uiState.matched.length);
+//     computeAges(uiState.matched);
+//     return;
+//   }
 
-  uiState.matched = [...uiState.matched, ...queue];
-  log(`Queue: ${queue.length}, Matched: ${uiState.matched.length}`);
+//   uiState.matched = [...uiState.matched, ...queue];
+//   log(`Queue: ${queue.length}, Matched: ${uiState.matched.length}`);
 
-  const devDOM = [...document.querySelectorAll('.dev-item')];
-  devDOM.forEach((div) => {
-    const id = div.dataset.devId;
-    if (id && !uiState.matched.includes(id)) {
-      div.classList.remove('matched');
-    }
-  });
+//   const devDOM = [...document.querySelectorAll('.dev-item')];
+//   devDOM.forEach((div) => {
+//     const id = div.dataset.devId;
+//     if (id && !uiState.matched.includes(id)) {
+//       div.classList.remove('matched');
+//     }
+//   });
 
-  queue.forEach((devId) => {
-    const div = document.querySelector(`[data-dev-id="${devId}"]`);
-    if (div) {
-      div.classList.add('matched');
-    }
-  });
+//   queue.forEach((devId) => {
+//     const div = document.querySelector(`[data-dev-id="${devId}"]`);
+//     if (div) {
+//       div.classList.add('matched');
+//     }
+//   });
 
-  const matchedLen = uiState.matched.length;
-  const dataWrap = document.querySelector('[data-collection-wrap]');
-  countDisplay.textContent = `${matchedLen} of ${uiState.devs.length}`;
-  if (matchedLen >= 1 && !dataWrap.classList.contains('filtered')) {
-    dataWrap.classList.add('filtered');
-  }
+//   const matchedLen = uiState.matched.length;
+//   const dataWrap = document.querySelector('[data-collection-wrap]');
+//   countDisplay.textContent = `${matchedLen} of ${uiState.devs.length}`;
+//   if (matchedLen >= 1 && !dataWrap.classList.contains('filtered')) {
+//     dataWrap.classList.add('filtered');
+//   }
 
-  requestAnimationFrame(displayMatches);
-};
+//   requestAnimationFrame(displayMatches);
+// };
 
-const timeIsRemaining = (deadline) => {
-  if (deadline && typeof deadline.timeRemaining === 'function') {
-    // TODO if possible, expose what 0.75 represents to the UI and allow the user to control it
-    return parseInt(deadline.timeRemaining() * uiState.idleTimeUsage, 10) > 0;
-  }
-  return false;
-};
+// const timeIsRemaining = (deadline) => {
+//   if (deadline && typeof deadline.timeRemaining === 'function') {
+//     // TODO if possible, expose what 0.75 represents to the UI and allow the user to control it
+//     return parseInt(deadline.timeRemaining() * uiState.idleTimeUsage, 10) > 0;
+//   }
+//   return false;
+// };
 
-const loadQueueHasItems = () => uiState.loadQueueIndex < uiState.devsToRender.length;
-const searchQueueHasItems = () => uiState.searchQueueIndex < uiState.allDevsCount.length;
+// const loadQueueHasItems = () => uiState.loadQueueIndex < uiState.devsToRender.length;
+// const searchQueueHasItems = () => uiState.searchQueueIndex < uiState.allDevsCount.length;
 
-const firstPageIsReady = () => uiState.queueIndex >= uiState.pageSize;
+// const firstPageIsReady = () => uiState.queueIndex >= uiState.pageSize;
 
-const processQuery = (deadline) => {
-  while (timeIsRemaining(deadline) && searchQueueHasItems()) {
-    const dev = uiState.devs[uiState.queueIndex];
-    const matched = uiState.queryHandler(uiState.query, dev);
-    if (matched === true) {
-      uiState.jobQueue.push(dev.id);
-    }
-    uiState.queueIndex += 1;
-  }
+// const processQuery = (deadline) => {
+//   while (timeIsRemaining(deadline) && searchQueueHasItems()) {
+//     const dev = uiState.devs[uiState.queueIndex];
+//     const matched = uiState.queryHandler(uiState.query, dev);
+//     if (matched === true) {
+//       uiState.jobQueue.push(dev.id);
+//     }
+//     uiState.queueIndex += 1;
+//   }
 
-  requestAnimationFrame(displayMatches);
-  if (!searchQueueHasItems()) return;
+//   requestAnimationFrame(displayMatches);
+//   if (!searchQueueHasItems()) return;
 
-  requestIdleCallback(processQuery);
-};
+//   requestIdleCallback(processQuery);
+// };
 
-const queryData = (input) => {
-  // if (uiState.status === 'LOADING') return;
+// const queryData = (input) => {
+//   // if (uiState.status === 'LOADING') return;
 
-  const utterance = input.toLowerCase();
-  const dataWrap = document.querySelector('[data-collection-wrap]');
-  const devsLen = uiState.devs.length;
-  if (utterance === '') {
-    dataWrap.classList.remove('filtered');
-    ageDisplay.textContent = '';
-    countDisplay.textContent = `${devsLen} of ${devsLen}`;
-    return;
-  }
+//   const utterance = input.toLowerCase();
+//   const dataWrap = document.querySelector('[data-collection-wrap]');
+//   const devsLen = uiState.devs.length;
+//   if (utterance === '') {
+//     dataWrap.classList.remove('filtered');
+//     ageDisplay.textContent = '';
+//     countDisplay.textContent = `${devsLen} of ${devsLen}`;
+//     return;
+//   }
 
-  const parts = utterance.split(/&\s*/).map((q) => (q || '').trim());
-  const query = parts[parts.length - 1];
-  const isInValidQuery = query.length <= 2;
+//   const parts = utterance.split(/&\s*/).map((q) => (q || '').trim());
+//   const query = parts[parts.length - 1];
+//   const isInValidQuery = query.length <= 2;
 
-  if (isInValidQuery) {
-    dataWrap.classList.remove('filtered');
-    ageDisplay.textContent = '';
-    countDisplay.textContent = `${devsLen} of ${devsLen}`;
-    return;
-  }
+//   if (isInValidQuery) {
+//     dataWrap.classList.remove('filtered');
+//     ageDisplay.textContent = '';
+//     countDisplay.textContent = `${devsLen} of ${devsLen}`;
+//     return;
+//   }
 
-  const qHandler = uiState.queryHandlers.find(({ matcher }) => matcher && matcher.test(query) === true);
+//   const qHandler = uiState.queryHandlers.find(({ matcher }) => matcher && matcher.test(query) === true);
 
-  if (!qHandler) {
-    dataWrap.classList.remove('filtered');
-    ageDisplay.textContent = '';
-    countDisplay.textContent = `${devsLen} of ${devsLen}`;
-    return;
-  }
+//   if (!qHandler) {
+//     dataWrap.classList.remove('filtered');
+//     ageDisplay.textContent = '';
+//     countDisplay.textContent = `${devsLen} of ${devsLen}`;
+//     return;
+//   }
 
-  uiState.matched = [];
-  uiState.query = query;
-  // uiState.queueIndex = 0;
-  // uiState.jobQueue = [];
-  uiState.queryHandler = qHandler.handler;
+//   uiState.matched = [];
+//   uiState.query = query;
+//   // uiState.queueIndex = 0;
+//   // uiState.jobQueue = [];
+//   uiState.queryHandler = qHandler.handler;
 
-  // requestIdleCallback(processQuery);
-};
+//   // requestIdleCallback(processQuery);
+// };
 
-const displayData = () => {
-  const queue = uiState.jobQueue.splice(0);
-  log(`Load Queue: ${queue.length}`);
+// const displayData = () => {
+//   const queue = uiState.jobQueue.splice(0);
+//   log(`Load Queue: ${queue.length}`);
 
-  // const devsLength = uiState.devs.length;
-  // countDisplay.textContent = `${uiState.queueIndex} of ${devsLength}`;
+//   // const devsLength = uiState.devs.length;
+//   // countDisplay.textContent = `${uiState.queueIndex} of ${devsLength}`;
 
-  if (firstPageIsReady()) {
-    // TODO `.classList.remove('on');` call means internal implementation details are leaking out
-    progressBar.classList.remove('on');
-  }
+//   if (firstPageIsReady()) {
+//     // TODO `.classList.remove('on');` call means internal implementation details are leaking out
+//     progressBar.classList.remove('on');
+//   }
 
-  if (queue.length <= 0) return;
+//   if (queue.length <= 0) return;
 
-  progressBar.value = uiState.queueIndex;
-  const nodes = domParser().parseFromString(queue.join(''), 'text/html');
+//   progressBar.value = uiState.queueIndex;
+//   const nodes = domParser().parseFromString(queue.join(''), 'text/html');
 
-  nodes.body.childNodes.forEach((n) => {
-    contentArea.appendChild(n);
+//   nodes.body.childNodes.forEach((n) => {
+//     contentArea.appendChild(n);
+//     // iObserver.observe(n);
+//   });
+
+//   requestAnimationFrame(displayData);
+// };
+
+const renderAPage = () => {
+  const items = uiState.devsToRender.slice();
+  if (items.length <= 0) return;
+
+  progressBar.value = items.length;
+  const nodes = domParser().parseFromString(items.join(''), 'text/html');
+  nodes.body.childNodes.forEach((node) => {
+    contentArea.appendChild(node);
     // iObserver.observe(n);
   });
-
-  requestAnimationFrame(displayData);
+  progressBar.classList.remove('on');
+  uiState.devsToRender = [];
 };
 
+const runQuery = async (input) => {
+  const userInput = input.toLowerCase();
+  uiState.devsToRender = await OMT.runQuery(userInput);
+  requestIdleCallback(renderAPage);
+};
+
+let queryPromise = Promise.resolve();
 const onSearchInput = ({ target }) => {
   if (uiState.searchDebouncer) clearTimeout(uiState.searchDebouncer);
 
   const input = (target.value || '').trim();
   if (input === '') return;
 
-  uiState.searchDebouncer = setTimeout(() => queryData(input), 1000);
+  uiState.searchDebouncer = setTimeout(() => {
+    queryPromise.then(() => {
+      queryPromise = runQuery(input);
+      return queryPromise;
+    });
+  }, 1000);
 };
 
 const enableSmartSearch = () => {
@@ -523,41 +551,39 @@ const enableSmartSearch = () => {
   }, 3000);
 };
 
-const processFetchData = (deadline) => {
-  // uiState.status = 'RENDERING';
-  while (timeIsRemaining(deadline) && loadQueueHasItems()) {
-    // TODO order in devsToRender does not really matter
-    // since .shift() is O(n), consider using .pop() if it makes sense
-    const dev = uiState.devsToRender.shift();
-    uiState.loadQueue.push(dev.domString);
-    uiState.loadQueueIndex += 1;
-  }
+// const processFetchData = (deadline) => {
+//   // uiState.status = 'RENDERING';
+//   while (timeIsRemaining(deadline) && loadQueueHasItems()) {
+//     // TODO order in devsToRender does not really matter
+//     // since .shift() is O(n), consider using .pop() if it makes sense
+//     const dev = uiState.devsToRender.shift();
+//     uiState.loadQueue.push(dev.domString);
+//     uiState.loadQueueIndex += 1;
+//   }
 
-  requestAnimationFrame(displayData);
-  if (firstPageIsReady()) {
-    // uiState.status = 'READY';
-    enableSmartSearch();
-  }
+//   requestAnimationFrame(displayData);
+//   if (firstPageIsReady()) {
+//     // uiState.status = 'READY';
+//     enableSmartSearch();
+//   }
 
-  if (!loadQueueHasItems()) return;
-  requestIdleCallback(processFetchData);
-};
+//   if (!loadQueueHasItems()) return;
+//   requestIdleCallback(processFetchData);
+// };
 
 const handleFecthResponse = async ([data]) => {
   const { developers } = data;
+  progressBar.value = developers.length;
   log(`Received ${developers.length} devs data ...`);
 
-  const startDevs = developers.slice(0, uiState.pageSize * 2);
-  progressBar.setAttribute('max', startDevs.length);
-  progressBar.value = 0;
-
-  const { developers: devsToRender } = await OMT.processStartDevs({ startDevs });
-
-  // devsToRender is frozen by immer
-  // make a copy so that processData can mutate it
-  uiState.devsToRender = devsToRender.slice();
-  uiState.allDevsCount += devsToRender.length;
-  requestIdleCallback(processFetchData);
+  if (!uiState.displayedFirstPage) {
+    const payload = { developers, isFirstPage: true, pageSize: uiState.pageSize };
+    const { devsToRender } = await OMT.processDeveloperData(payload);
+    uiState.devsToRender = devsToRender;
+    uiState.allDevsCount += devsToRender.length;
+    requestAnimationFrame(renderAPage);
+    enableSmartSearch();
+  }
 
   // TODO process the remaining dev records
   // and update uiState.allDevsCount
