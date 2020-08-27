@@ -75,7 +75,9 @@ const uiState = {
 
   queueIndex: 0,
 
-  jobQueue: []
+  jobQueue: [],
+
+  searchDebouncer: undefined
 };
 
 // let OMT;
@@ -332,23 +334,6 @@ const dobInQuarters = () => {
   return { matcher: queryMatcher, handler: queryHandler };
 };
 
-const devToDOM = (dev) => {
-  const { id, avatar, bio, country } = dev;
-
-  return `
-    <div data-dev-id="${id}" class="dev-item">
-        <div class="avatar">
-            <img data-src="${avatar}" src="https://via.placeholder.com/64" title="${bio.name}" />
-        </div>
-        <div class="about">
-            <p>${bio.shortName}</p>
-            <p>${bio.mob[0]}, ${bio.yob}</p>
-            <p>${country}</p>
-        </div>
-    </div>
-  `;
-};
-
 const displayMatches = () => {
   const queue = uiState.jobQueue.splice(0);
   if (queue.length <= 0) {
@@ -414,10 +399,10 @@ const processQuery = (deadline) => {
   requestIdleCallback(processQuery);
 };
 
-const queryData = ({ target }) => {
-  if (uiState.status === 'LOADING') return;
+const queryData = (input) => {
+  // if (uiState.status === 'LOADING') return;
 
-  const utterance = (target.value || '').toLowerCase();
+  const utterance = input.toLowerCase();
   const dataWrap = document.querySelector('[data-collection-wrap]');
   const devsLen = uiState.devs.length;
   if (utterance === '') {
@@ -481,12 +466,20 @@ const displayData = () => {
   requestAnimationFrame(displayData);
 };
 
-// TODO de-bounce search input
+const onSearchInput = ({ target }) => {
+  if (uiState.searchDebouncer) clearTimeout(uiState.searchDebouncer);
+
+  const input = (target.value || '').trim();
+  if (input === '') return;
+
+  uiState.searchDebouncer = setTimeout(() => queryData(input), 1000);
+};
+
 const enableSmartSearch = () => {
-  uiState.queryHandlers = [dobInMonthOrYear(), dobInHalfAYear(), dobInQuarters(), skillByCompetency()];
+  // uiState.queryHandlers = [dobInMonthOrYear(), dobInHalfAYear(), dobInQuarters(), skillByCompetency()];
 
   const searchField = select('input');
-  searchField.addEventListener('input', queryData);
+  searchField.addEventListener('input', onSearchInput);
   searchField.focus();
 
   let tourId;
@@ -521,6 +514,8 @@ const enableSmartSearch = () => {
 const processData = (deadline) => {
   // uiState.status = 'RENDERING';
   while (timeIsRemaining(deadline) && queueHasItems()) {
+    // TODO order in devsToRender does not really matter
+    // since .shift() is O(n), consider using .pop() if it makes sense
     const dev = uiState.devsToRender.shift();
     uiState.jobQueue.push(dev.domString);
     uiState.queueIndex += 1;
@@ -545,8 +540,12 @@ const handleFecthResponse = async ([data]) => {
   progressBar.value = 0;
 
   const { developers: devsToRender } = await OMT.processStartDevs({ startDevs });
+
+  // devsToRender is frozen by immer
+  // make a copy so that processData can mutate it
   uiState.devsToRender = devsToRender.slice();
   requestIdleCallback(processData);
+
   // TODO process the remaining dev records
 };
 
