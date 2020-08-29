@@ -7,6 +7,11 @@ import { produce } from 'immer';
 // enableAllPlugins();
 
 let state = {
+  query: '',
+  queryMatches: [],
+  sorted: {
+    byYearOfBirth: []
+  },
   staging: [],
   developers: {}
 };
@@ -25,6 +30,115 @@ const months = [
   ['Nov', 'November'],
   ['Dec', 'December']
 ];
+
+const searchByFaningOut = (payload) => {
+  const { start, data, isEQ } = payload;
+  console.log(`faning out from ${start} ...`);
+
+  let left = start;
+  let right = start + 1;
+
+  while (left > 0) {
+    if (isEQ(data[left - 1])) left -= 1;
+    else break;
+  }
+
+  while (right < data.length) {
+    if (!isEQ(data[right])) break;
+    right += 1;
+  }
+
+  return data.slice(left, right);
+};
+
+const runBinarySearch = (payload) => {
+  const { sorted, isLTE } = payload;
+  const itemsLen = sorted.length;
+
+  // At below 5 items, not sure there's need to further
+  // split the sorted array, we can just quickly filter
+  // for our matches. Need a way to determine what 5 should be.
+  if (itemsLen <= 5) return sorted.filter(isLTE);
+
+  const { isGT, isEQ } = payload;
+  const midIndex = Math.floor(itemsLen / 2);
+  const midItem = sorted[midIndex];
+  console.log('mid item: ', midItem);
+
+  if (isEQ(midItem) === true) {
+    return searchByFaningOut({
+      start: midIndex, data: sorted, isEQ
+    });
+  }
+
+  let bounds;
+  if (isGT(midItem) === true) {
+    bounds = { left: 0, right: midIndex };
+  } else {
+    bounds = { left: midIndex + 1, right: sorted.length };
+  }
+
+  const data = sorted.slice(bounds.left, bounds.right);
+  return runBinarySearch({
+    sorted: data, isEQ, isGT, isLTE
+  });
+};
+
+const searchByYearOfBirth = (query) => {
+  const qry = (query.split(/=\s*/)[1] || '').trim();
+  console.log(`qry: ${qry}`);
+
+  // search by 4 digit year, e.g 1985
+  if (/\d{4}/.test(qry)) {
+    console.log('searching by year');
+    const queryYear = parseInt(qry, 10);
+    const isGT = ({ yob }) => yob > queryYear;
+    const isEQ = ({ yob }) => yob === queryYear;
+    const isLTE = ({ yob }) => yob <= queryYear;
+
+    return runBinarySearch({
+      isEQ, isGT, isLTE, sorted: state.sorted.byYearOfBirth
+    });
+  }
+
+  return undefined;
+};
+
+const searchByMonthOfBirth = (query) => {};
+
+const engines = [{
+  type: 'byYearOfBirth',
+  // match @dob = 1985
+  matcher: /^@dob\s*=\s*\d{4}$/i,
+  sorter: (devA, devB) => devA.bio.dob - devB.bio.dob,
+  indexer: (dev) => {
+    const yob = dev.bio.dob.getFullYear();
+    return { id: dev.id, yob };
+  },
+  search: searchByYearOfBirth
+}, {
+  type: 'byMonthOfBirth',
+  // match @dob = Aug | August
+  matcher: /^@dob\s*=\s*[a-z]{3,}$/i,
+  sorter: (devA, devB) => devA.bio.dob.getMonth() - devB.bio.dob.getMonth(),
+  indexer: (dev) => {
+    const mob = dev.bio.dob.getMonth();
+    return { id: dev.id, mob: months[mob] };
+  },
+  search: searchByMonthOfBirth
+}];
+
+const sortDevs = async (developers) => {
+  const devs = developers.slice();
+  engines.forEach(({ type, sorter, indexer }) => {
+    const sorted = devs.sort(sorter);
+    state = produce(state, (draft) => {
+      draft.sorted[type] = sorted.map(indexer);
+    });
+  });
+
+  console.log(state.sorted);
+};
 
 const devToDOMString = (dev) => {
   const {
@@ -93,13 +207,46 @@ const processDeveloperData = async (payload = {}) => {
     draft.staging = [];
   });
 
+  // TODO dont sort the entire collection every time!!
+  sortDevs(Object.values(state.developers));
+
   return { devsCount: Object.keys(state.developers).length };
+};
+
+const runQuery = async (query) => {
+  console.log(query);
+  const engine = engines.find(({ matcher }) => matcher && matcher.test(query) === true);
+  if (!engine) return []; // no matches found
+
+  state = produce(state, (draft) => {
+    draft.query = query;
+  });
+
+  const matchingIndexes = engine.search(query);
+  console.log(matchingIndexes);
+
+  if (matchingIndexes && matchingIndexes.length > 0) {
+    const gatherer = new Array(matchingIndexes.length);
+    const matched = matchingIndexes.reduce((matches, { id }, pos) => {
+      const dev = state.developers[id];
+      if (dev) matches[pos] = dev.domString;
+      return matches;
+    }, gatherer);
+
+    state = produce(state, (draft) => {
+      draft.queryMatches = matched;
+    });
+    return state.queryMatches;
+  }
+
+  return []; // no matches found
 };
 
 /**
  * exposed Analyzer "API"
  */
 const OMTInterface = {
+  runQuery,
   processDeveloperData
 };
 

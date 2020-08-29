@@ -424,10 +424,8 @@ const dobInQuarters = () => {
 
 const renderAPage = () => {
   const items = uiState.devsToRender.slice();
-  if (items.length <= 0) return;
-
-  progressBar.value = items.length;
   const nodes = domParser().parseFromString(items.join(''), 'text/html');
+  contentArea.innerHTML = '';
   nodes.body.childNodes.forEach((node) => {
     contentArea.appendChild(node);
     // iObserver.observe(n);
@@ -439,8 +437,15 @@ const renderAPage = () => {
 
 const runQuery = async (input) => {
   const userInput = input.toLowerCase();
-  // uiState.devsToRender = await OMT.runQuery(userInput);
-  // requestIdleCallback(renderAPage);
+  if (userInput === '') return;
+
+  const parts = userInput.split(/&\s*/).map((q) => (q || '').trim());
+  const query = parts[parts.length - 1];
+  const isInValidQuery = query.length <= 2;
+  if (isInValidQuery) return;
+
+  uiState.devsToRender = await OMT.runQuery(query);
+  requestIdleCallback(renderAPage);
 };
 
 let queryPromise = Promise.resolve();
@@ -459,8 +464,6 @@ const onSearchInput = ({ target }) => {
 };
 
 const enableSmartSearch = () => {
-  // uiState.queryHandlers = [dobInMonthOrYear(), dobInHalfAYear(), dobInQuarters(), skillByCompetency()];
-
   const searchField = select('input');
   searchField.addEventListener('input', onSearchInput);
   searchField.focus();
@@ -502,8 +505,11 @@ const handleFecthResponse = async ([data]) => {
   if (!uiState.displayedFirstPage) {
     const payload = { developers, isFirstPage: true, pageSize: uiState.pageSize };
     const { devsToRender } = await OMT.processDeveloperData(payload);
+
+    progressBar.value = devsToRender.length;
     uiState.devsToRender = devsToRender;
     uiState.allDevsCount += devsToRender.length;
+
     requestAnimationFrame(renderAPage);
     enableSmartSearch();
     uiState.displayedFirstPage = true;
