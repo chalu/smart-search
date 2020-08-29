@@ -95,29 +95,29 @@ const countDisplay = select('[data-search-wrap] span:nth-child(1)');
 //     });
 // });
 
-const computeAges = (devIds = [], ages = {}) => {
-  const { min, max, avg } = ages;
+// const computeAges = (devIds = [], ages = {}) => {
+//   const { min, max, avg } = ages;
 
-  const id = devIds.shift();
-  if (!id) return { min, max, avg };
+//   const id = devIds.shift();
+//   if (!id) return { min, max, avg };
 
-  const dev = id ? uiState.devs.find((d) => d.id === id) : undefined;
-  if (!dev) return { min, max, avg };
+//   const dev = id ? uiState.devs.find((d) => d.id === id) : undefined;
+//   if (!dev) return { min, max, avg };
 
-  const yob = new Date(dev.bio.dob).getFullYear();
-  const thisYr = new Date().getFullYear();
-  const age = thisYr - yob;
-  ages.min = Math.min(ages.min || Number.POSITIVE_INFINITY, age);
-  ages.max = Math.max(ages.max || 0, age);
-  ages.total = (ages.total || 0) + age;
-  ages.count = (ages.count || 0) + 1;
-  ages.avg = Math.round(ages.total / ages.count);
+//   const yob = new Date(dev.bio.dob).getFullYear();
+//   const thisYr = new Date().getFullYear();
+//   const age = thisYr - yob;
+//   ages.min = Math.min(ages.min || Number.POSITIVE_INFINITY, age);
+//   ages.max = Math.max(ages.max || 0, age);
+//   ages.total = (ages.total || 0) + age;
+//   ages.count = (ages.count || 0) + 1;
+//   ages.avg = Math.round(ages.total / ages.count);
 
-  requestAnimationFrame(() => {
-    ageDisplay.textContent = `Age: ~${ages.avg} | >=${ages.min} | <=${ages.max}`;
-  });
-  return computeAges(devIds, ages);
-};
+//   requestAnimationFrame(() => {
+//     ageDisplay.textContent = `Age: ~${ages.avg} | >=${ages.min} | <=${ages.max}`;
+//   });
+//   return computeAges(devIds, ages);
+// };
 
 const skillByCompetency = () => {
   const matcher = /^#[a-z]+\s*(=|>=|<=|!=)\s*[a-z ]+$/i;
@@ -321,105 +321,12 @@ const dobInQuarters = () => {
   return { matcher: queryMatcher, handler: queryHandler };
 };
 
-// const displayMatches = () => {
-//   const queue = uiState.jobQueue.splice(0);
-//   if (queue.length <= 0) {
-//     log(uiState.matched.length);
-//     computeAges(uiState.matched);
-//     return;
-//   }
-
-//   uiState.matched = [...uiState.matched, ...queue];
-//   log(`Queue: ${queue.length}, Matched: ${uiState.matched.length}`);
-
-//   const devDOM = [...document.querySelectorAll('.dev-item')];
-//   devDOM.forEach((div) => {
-//     const id = div.dataset.devId;
-//     if (id && !uiState.matched.includes(id)) {
-//       div.classList.remove('matched');
-//     }
-//   });
-
-//   queue.forEach((devId) => {
-//     const div = document.querySelector(`[data-dev-id="${devId}"]`);
-//     if (div) {
-//       div.classList.add('matched');
-//     }
-//   });
-
-//   const matchedLen = uiState.matched.length;
-//   const dataWrap = document.querySelector('[data-collection-wrap]');
-//   countDisplay.textContent = `${matchedLen} of ${uiState.devs.length}`;
-//   if (matchedLen >= 1 && !dataWrap.classList.contains('filtered')) {
-//     dataWrap.classList.add('filtered');
-//   }
-
-//   requestAnimationFrame(displayMatches);
-// };
-
 // const timeIsRemaining = (deadline) => {
 //   if (deadline && typeof deadline.timeRemaining === 'function') {
 //     // TODO if possible, expose what 0.75 represents to the UI and allow the user to control it
 //     return parseInt(deadline.timeRemaining() * uiState.idleTimeUsage, 10) > 0;
 //   }
 //   return false;
-// };
-
-// const processQuery = (deadline) => {
-//   while (timeIsRemaining(deadline) && searchQueueHasItems()) {
-//     const dev = uiState.devs[uiState.queueIndex];
-//     const matched = uiState.queryHandler(uiState.query, dev);
-//     if (matched === true) {
-//       uiState.jobQueue.push(dev.id);
-//     }
-//     uiState.queueIndex += 1;
-//   }
-
-//   requestAnimationFrame(displayMatches);
-//   if (!searchQueueHasItems()) return;
-
-//   requestIdleCallback(processQuery);
-// };
-
-// const queryData = (input) => {
-
-//   const utterance = input.toLowerCase();
-//   const dataWrap = document.querySelector('[data-collection-wrap]');
-//   const devsLen = uiState.devs.length;
-//   if (utterance === '') {
-//     dataWrap.classList.remove('filtered');
-//     ageDisplay.textContent = '';
-//     countDisplay.textContent = `${devsLen} of ${devsLen}`;
-//     return;
-//   }
-
-//   const parts = utterance.split(/&\s*/).map((q) => (q || '').trim());
-//   const query = parts[parts.length - 1];
-//   const isInValidQuery = query.length <= 2;
-
-//   if (isInValidQuery) {
-//     dataWrap.classList.remove('filtered');
-//     ageDisplay.textContent = '';
-//     countDisplay.textContent = `${devsLen} of ${devsLen}`;
-//     return;
-//   }
-
-//   const qHandler = uiState.queryHandlers.find(({ matcher }) => matcher && matcher.test(query) === true);
-
-//   if (!qHandler) {
-//     dataWrap.classList.remove('filtered');
-//     ageDisplay.textContent = '';
-//     countDisplay.textContent = `${devsLen} of ${devsLen}`;
-//     return;
-//   }
-
-//   uiState.matched = [];
-//   uiState.query = query;
-//   // uiState.queueIndex = 0;
-//   // uiState.jobQueue = [];
-//   uiState.queryHandler = qHandler.handler;
-
-//   // requestIdleCallback(processQuery);
 // };
 
 const renderAPage = () => {
