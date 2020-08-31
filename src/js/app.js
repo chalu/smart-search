@@ -49,14 +49,14 @@ const uiState = {
    * how many records should the
    * app display at a given time
    */
-  pageSize: 10,
+  pageSize: 12,
 
   /**
    * how many developer records
    * to fetch from the server.
    * default is 3.5k
    */
-  devQty: 50,
+  devQty: 1500,
 
   devsToRender: [],
 
