@@ -3,6 +3,7 @@
 
 // import expose from 'comlink';
 import { produce } from 'immer';
+import arrayviewer from './array-wrap.js';
 
 // enableAllPlugins();
 
@@ -33,58 +34,53 @@ const months = [
 
 const searchByFaningOut = (payload) => {
   const { start, data, isEQ } = payload;
-  console.log(`faning out from ${start} ...`);
+  console.log(`faning out @ [${start}]`);
 
   let left = start;
   let right = start + 1;
 
   while (left > 0) {
-    if (isEQ(data[left - 1])) left -= 1;
+    if (isEQ(data.get(left - 1))) left -= 1;
     else break;
   }
 
   while (right < data.length) {
-    if (!isEQ(data[right])) break;
+    if (!isEQ(data.get(right))) break;
     right += 1;
   }
 
-  return data.slice(left, right);
+  return data.viewAs(left, right).toArray().filter(isEQ);
 };
 
 const runBinarySearch = (payload) => {
-  const { sorted, isLTE } = payload;
-  const itemsLen = sorted.length;
+  const { data, isEQ, isGT } = payload;
+  const itemsLen = data.length;
 
   // At below 5 items, not sure there's need to further
-  // split the sorted array, we can just quickly filter
+  // split the sorted (data) array, we can just quickly filter
   // for our matches. Need a way to determine what 5 should be.
-  if (itemsLen <= 5) return sorted.filter(isLTE);
+  if (itemsLen <= 5) return data.toArray().filter(isEQ);
 
-  const { isGT, isEQ } = payload;
-  const midIndex = Math.floor(itemsLen / 2);
-  const midItem = sorted[midIndex];
-  console.log('mid item: ', midItem);
-
+  const partition = data.partition();
+  const { midItem, midIndex } = partition;
   if (isEQ(midItem) === true) {
     return searchByFaningOut({
-      start: midIndex, data: sorted, isEQ
+      start: midIndex, data, isEQ
     });
   }
 
-  let bounds;
-  if (isGT(midItem) === true) {
-    bounds = { left: 0, right: midIndex };
-  } else {
-    bounds = { left: midIndex + 1, right: sorted.length };
-  }
-
-  const data = sorted.slice(bounds.left, bounds.right);
+  const { left, right } = partition;
+  console.log(`pivoting @ [${midIndex}]`);
+  const dataView = isGT(midItem) === true ? left() : right();
   return runBinarySearch({
-    sorted: data, isEQ, isGT, isLTE
+    isEQ, isGT, data: dataView
   });
 };
 
 const searchByYearOfBirth = (query) => {
+  // This can currently only search with
+  // = (e.g @dob = 1990). TODO: add support
+  // for !=, >, >=, <, <=
   const qry = (query.split(/=\s*/)[1] || '').trim();
   console.log(`qry: ${qry}`);
 
@@ -95,9 +91,10 @@ const searchByYearOfBirth = (query) => {
     const isGT = ({ yob }) => yob > queryYear;
     const isEQ = ({ yob }) => yob === queryYear;
     const isLTE = ({ yob }) => yob <= queryYear;
+    const data = arrayviewer(state.sorted.byYearOfBirth);
 
     return runBinarySearch({
-      isEQ, isGT, isLTE, sorted: state.sorted.byYearOfBirth
+      isEQ, isGT, isLTE, data
     });
   }
 
@@ -118,7 +115,7 @@ const engines = [{
   search: searchByYearOfBirth
 }, {
   type: 'byMonthOfBirth',
-  // match @dob = Aug | August
+  // TODO change this: match @dob = Aug | August
   matcher: /^@dob\s*=\s*[a-z]{3,}$/i,
   sorter: (devA, devB) => devA.bio.dob.getMonth() - devB.bio.dob.getMonth(),
   indexer: (dev) => {
@@ -136,8 +133,7 @@ const sortDevs = async (developers) => {
       draft.sorted[type] = sorted.map(indexer);
     });
   });
-
-  console.log(state.sorted);
+  // console.log(state.sorted);
 };
 
 const devToDOMString = (dev) => {
