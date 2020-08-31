@@ -1,30 +1,42 @@
 const arrayviewer = (anArray) => {
-  let start = 0;
-  let end = anArray.length;
-  const array = anArray;
-
   const arrayview = () => ({
-    length: end - start,
-    get: (index) => array[start + index],
-    toArray: () => array.slice(start, end + 1),
+    start: 0,
+    end: anArray.length,
+    length: anArray.length - 0,
+    get(index) {
+      return anArray[this.start + index];
+    },
+    toArray() {
+      return anArray.slice(this.start, this.end + 1);
+    },
     viewAs(dStart, dEnd) {
-      start += dStart;
-      end = dEnd === undefined ? this.length : dEnd;
-      return this.toArray();
+      this.start += dStart;
+      if (dEnd !== undefined) {
+        this.end = dEnd;
+        if (dEnd < this.start) {
+          this.end = this.start + (dEnd - dStart);
+        }
+      }
+      this.length = this.end - this.start;
+      console.log(`down to [${this.start}, ${this.end}]`);
+      return this;
     }
   });
 
   const view = arrayview();
-  const arraypartition = (pivot) => {
+  const arraypartition = (opts = {}) => {
+    const { at: pivot } = opts;
     const pivotIndex = pivot || Math.floor(view.length / 2);
     return {
-      mid: view.get(pivotIndex),
-      left: view.viewAs(start, pivotIndex - 1),
-      right: view.viewAs(pivotIndex + 1)
+      midIndex: pivotIndex,
+      midItem: view.get(pivotIndex),
+      left: () => view.viewAs(view.start, pivotIndex - 1),
+      right: () => view.viewAs(pivotIndex + 1)
     };
   };
+  view.partition = arraypartition;
 
-  return { ...view, partitionAt: arraypartition };
+  return { ...view };
 };
 
 export default arrayviewer;
