@@ -4,12 +4,43 @@
 
 > Performant way to load large data into frontend apps and intuitively query such data. See it live at [https://smart-inapp-search.netlify.app](https://smart-inapp-search.netlify.app)
 
-<img src="./src/images/app-preview.png">
+<img src="./src/images/mobile-preview.png" width="300px" style="display: block; margin: 0 auto;">
 
-Imagine fetching data from REST API without pagination support, and you end up with 50k records of developers. Imagine needing to query all 50k records for developers born in August, or everyone except those born in the 3rd quarter of the year i.e `@dob = Aug` and `@dob != Q3`
+Imagine fetching data from a REST API without pagination support, and you end up with 50k records of developers in a web app. How might a frontend app handle loading and displaying such data. Imagine needing to query all 50k records for developers born in August, or everyone except those born in the 3rd quarter of the year. Something like entering a query like `@dob = Aug` or `@dob != Q3` into a search field that gives you auto-complete suggestions for the query you are about to type.
 
-This app attempts to do these and more, including being a PWA that is snamrt enough to respect network conditions and the user's data saver preferences. E.g: 
-*   don't load developer profile images on 2G connectons
-*   no high-res images on data saver mode
+The assumption is that you have no control over the server's response and must tackle all the issues from within the frontend application.
+
+This app will be a PWA that attempts to do these and more. It is snamrt enough to respect network conditions and the user's data saver preferences.
+
+## Current Features
+
+*   Search by year or birth. E.g `@dob = 1989`
+*   Uses custom built *binary search* algorithm to return a collection of search matches and achieve at least `O(log n)` time complexity while searching over the potentially large dataset
+*   Uses custom built *array-view* and *array-partition* data structures to significantly improve memory usage and prevent unecessary copying of arrays
+
+## TODOs
+
+*   Add support for more query operators. That is, support (>, >=, <, <=, !=). E.g `@dob >= 1985`
+*   Support searching by month of birth, day or birth, quarter of birth and half or birth (i.e H1 oe H2)
+*   Support searching by tech tags which often represent stacks, languages, or tools the developer has experience in
+*   Support search by competence level. supported levels (in increasing order of competence) are:
+    -   Have No Idea
+    -   Heard About It
+    -   Learning It
+    -   Learnt It
+    -   Building With It
+    -   Built With It
+    -   Deployed It
+    -   Can Mentor On It
+    -   Can Consult On It
+
+    With the above, a query like `#React = Built With It` means `show me developers who have built a React app`. Similary, a query like `#React >= Deployed It` means `show me developers who have buit and deployed a React app to production and are experienced enough to consult on React`
+*   support HTTP streams and allow the app to switch between bulk data fetch and streams
+*   No profile images on 2G connectons
+*   No high-res images on data saver mode
+*   Paginate over the data by clicking arrows on the far left/right on desktop
+*   Paginate over the data by swiping left/right on mobile
+*   Enable pagination over search results when they exceed the page size
+*   Record count (i.e 12 of 1500) should reflect search results and indicate page being viewed
 
 > This still work in progress
