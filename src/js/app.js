@@ -28,118 +28,96 @@
   9. Make this into a PWA, if it makes sense
 */
 
-const state = {};
-const months = [
-  ['Jan', 'January'],
-  ['Feb', 'February'],
-  ['Mar', 'March'],
-  ['Apr', 'April'],
-  ['May', 'May'],
-  ['Jun', 'June'],
-  ['Jul', 'July'],
-  ['Aug', 'August'],
-  ['Sept', 'September'],
-  ['Oct', 'October'],
-  ['Nov', 'November'],
-  ['Dec', 'December']
-];
+/* eslint-disable import/extensions */
+/* eslint-disable import/no-unresolved */
 
-const getProgressBar = () => {
-  let pBar;
-  return () => {
-    if (pBar) return pBar;
+// import { wrap } from 'https://unpkg.com/comlink@4.3.0/dist/esm/comlink.mjs';
+// import { wrap } from 'comlink';
 
-    pBar = document.querySelector('progress');
-    return pBar;
-  };
+import OMT from './omt.js';
+import { log, useDOMSelector, getDomParser } from './ui-utils.js';
+
+const uiState = {
+  /**
+   * how much of the device's
+   * main-thread idle time should
+   * we use up. Default is 75%
+   */
+  idleTimeUsage: 0.75,
+
+  /**
+   * how many records should the
+   * app display at a given time
+   */
+  pageSize: 12,
+
+  /**
+   * how many developer records
+   * to fetch from the server.
+   * default is 3.5k
+   */
+  devQty: 1500,
+
+  devsToRender: [],
+
+  allDevsCount: 0,
+
+  displayedFirstPage: false,
+
+  searchDebouncer: undefined
 };
 
-const pBar = getProgressBar();
+// let OMT;
+const domParser = getDomParser();
+const { select } = useDOMSelector();
+const progressBar = select('progress');
+const contentArea = select('[data-collection-wrap]');
+// const ageDisplay = select('[data-search-wrap] span:nth-child(2)');
+const countDisplay = select('[data-search-wrap] span:nth-child(1)');
 
-const getDomParser = () => {
-  let parser;
-  return () => {
-    if (parser) return parser;
+// const iObserver = new IntersectionObserver((entries) => {
+//   const srcBackup = ({ target }) => {
+//     // TODO this can be a data-url if it helps to
+//     // save bandwidth, latency e.t.c
+//     target.src = 'https://placehold.it/48x48.png';
+//   };
+//   entries
+//     .filter((e) => e.isIntersecting === true)
+//     .forEach(({ target }) => {
+//       // TODO consider un-observing the IMG elements as well
+//       requestAnimationFrame(() => {
+//         const img = target.querySelector('img');
+//         if (img && !img.hasAttribute('src') && img.hasAttribute('data-src')) {
+//           img.addEventListener('error', srcBackup);
+//           img.setAttribute('src', img.getAttribute('data-src'));
+//         }
+//       });
+//     });
+// });
 
-    parser = new DOMParser();
-    return parser;
-  };
-};
+// const computeAges = (devIds = [], ages = {}) => {
+//   const { min, max, avg } = ages;
 
-const getContentArea = () => {
-  let root;
-  return () => {
-    if (root) return root;
+//   const id = devIds.shift();
+//   if (!id) return { min, max, avg };
 
-    root = document.querySelector('[data-collection-wrap]');
-    return root;
-  };
-};
+//   const dev = id ? uiState.devs.find((d) => d.id === id) : undefined;
+//   if (!dev) return { min, max, avg };
 
-const getCountDisplay = () => {
-  let node;
-  return () => {
-    if (node) return node;
+//   const yob = new Date(dev.bio.dob).getFullYear();
+//   const thisYr = new Date().getFullYear();
+//   const age = thisYr - yob;
+//   ages.min = Math.min(ages.min || Number.POSITIVE_INFINITY, age);
+//   ages.max = Math.max(ages.max || 0, age);
+//   ages.total = (ages.total || 0) + age;
+//   ages.count = (ages.count || 0) + 1;
+//   ages.avg = Math.round(ages.total / ages.count);
 
-    node = document.querySelector('[data-search-wrap] span:nth-child(1)');
-    return node;
-  };
-};
-
-const getAgeDisplay = () => {
-  let node;
-  return () => {
-    if (node) return node;
-
-    node = document.querySelector('[data-search-wrap] span:nth-child(2)');
-    return node;
-  };
-};
-
-const iObserver = new IntersectionObserver((entries) => {
-  const srcBackup = ({ target }) => {
-    // TODO this can be a data-url if it helps to
-    // save bandwidth, latency e.t.c
-    target.src = 'https://placehold.it/48x48.png';
-  };
-  entries
-    .filter((e) => e.isIntersecting === true)
-    .forEach(({ target }) => {
-      // TODO consider un-observing the IMG elements as well
-      requestAnimationFrame(() => {
-        const img = target.querySelector('img');
-        if (img && !img.hasAttribute('src') && img.hasAttribute('data-src')) {
-          img.addEventListener('error', srcBackup);
-          img.setAttribute('src', img.getAttribute('data-src'));
-        }
-      });
-    });
-});
-
-const computeAges = (devIds = [], ages = {}) => {
-  const { min, max, avg } = ages;
-
-  const id = devIds.shift();
-  if (!id) return { min, max, avg };
-
-  const dev = id ? state.devs.find((d) => d.id === id) : undefined;
-  if (!dev) return { min, max, avg };
-
-  const yob = new Date(dev.bio.dob).getFullYear();
-  const thisYr = new Date().getFullYear();
-  const age = thisYr - yob;
-  ages.min = Math.min(ages.min || Number.POSITIVE_INFINITY, age);
-  ages.max = Math.max(ages.max || 0, age);
-  ages.total = (ages.total || 0) + age;
-  ages.count = (ages.count || 0) + 1;
-  ages.avg = Math.round(ages.total / ages.count);
-
-  requestAnimationFrame(() => {
-    const ageDisplay = getAgeDisplay();
-    ageDisplay().textContent = `Age: ~${ages.avg} | >=${ages.min} | <=${ages.max}`;
-  });
-  return computeAges(devIds, ages);
-};
+//   requestAnimationFrame(() => {
+//     ageDisplay.textContent = `Age: ~${ages.avg} | >=${ages.min} | <=${ages.max}`;
+//   });
+//   return computeAges(devIds, ages);
+// };
 
 const skillByCompetency = () => {
   const matcher = /^#[a-z]+\s*(=|>=|<=|!=)\s*[a-z ]+$/i;
@@ -175,8 +153,8 @@ const skillByCompetency = () => {
         if (levelWeight < 0) return false;
 
         const found = skillGraph.find(
-          ({ skill, competence = '' }) => tag
-            === skill.toLowerCase() && weightedLevels.indexOf(competence) >= levelWeight
+          ({ skill, competence = '' }) =>
+            tag === skill.toLowerCase() && weightedLevels.indexOf(competence) >= levelWeight
         );
         return found !== undefined;
       }
@@ -200,7 +178,7 @@ const skillByCompetency = () => {
       level = level.trim();
       const { fn } = opHndlr;
       status = fn(tag, level, tags);
-      // console.log(`match for ${dev.bio.name}: ${status}`);
+      // log(`match for ${dev.bio.name}: ${status}`);
     }
 
     return status;
@@ -279,13 +257,14 @@ const dobInQuarters = () => {
     },
     {
       key: /^!=$/,
-      fn: (q, m) => (qtrs
-        .filter(({ key }) => !key.test(`${q}`))
-        .map(({ data }) => {
-          const [start, end] = data;
-          return m >= start && m <= end;
-        })
-        .includes(true))
+      fn: (q, m) =>
+        qtrs
+          .filter(({ key }) => !key.test(`${q}`))
+          .map(({ data }) => {
+            const [start, end] = data;
+            return m >= start && m <= end;
+          })
+          .includes(true)
     },
     {
       key: /^>=$/,
@@ -333,7 +312,7 @@ const dobInQuarters = () => {
       qry = qry.trim();
       const { fn } = opHndlr;
       status = fn(qry, month);
-      // console.log(`match for ${dev.bio.name}: ${status}`);
+      // log(`match for ${dev.bio.name}: ${status}`);
     }
 
     return status;
@@ -342,228 +321,137 @@ const dobInQuarters = () => {
   return { matcher: queryMatcher, handler: queryHandler };
 };
 
-const makeARow = (dev) => {
-  const {
-    id, avatar, bio, country
-  } = dev;
+// const timeIsRemaining = (deadline) => {
+//   if (deadline && typeof deadline.timeRemaining === 'function') {
+//     // TODO if possible, expose what 0.75 represents to the UI and allow the user to control it
+//     return parseInt(deadline.timeRemaining() * uiState.idleTimeUsage, 10) > 0;
+//   }
+//   return false;
+// };
 
-  const dob = new Date(bio.dob);
-  const names = bio.name.split(' ');
-  const name = `${names[0]} ${names[1].charAt(0).toUpperCase()}.`;
-
-  return `
-    <div data-dev-id="${id}" class="dev-item">
-        <div class="avatar">
-            <img data-src="${avatar}" title="${bio.name}" />
-        </div>
-        <div class="about">
-            <p>${name}</p>
-            <p>${months[dob.getMonth()][0]}, ${dob.getFullYear()}</p>
-            <p>${country}</p>
-        </div>
-    </div>
-  `;
-};
-
-const displayMatches = () => {
-  const queue = state.processQueue.splice(0);
-  if (queue.length <= 0) {
-    console.log(state.matched.length);
-    computeAges(state.matched);
-    return;
-  }
-
-  state.matched = [...state.matched, ...queue];
-  console.log(`Queue: ${queue.length}, Matched: ${state.matched.length}`);
-
-  const devDOM = [...document.querySelectorAll('.dev-item')];
-  devDOM.forEach((div) => {
-    const id = div.dataset.devId;
-    if (id && !state.matched.includes(id)) {
-      div.classList.remove('matched');
-    }
+const renderAPage = () => {
+  const items = uiState.devsToRender.slice();
+  const nodes = domParser().parseFromString(items.join(''), 'text/html');
+  contentArea.innerHTML = '';
+  nodes.body.childNodes.forEach((node) => {
+    contentArea.appendChild(node);
+    // iObserver.observe(n);
   });
 
-  queue.forEach((devId) => {
-    const div = document.querySelector(`[data-dev-id="${devId}"]`);
-    if (div) {
-      div.classList.add('matched');
-    }
-  });
-
-  const matchedLen = state.matched.length;
-  const dataWrap = document.querySelector('[data-collection-wrap]');
-  const recordStatus = getCountDisplay();
-  recordStatus().textContent = `${matchedLen} of ${state.devs.length}`;
-  if (matchedLen >= 1 && !dataWrap.classList.contains('filtered')) {
-    dataWrap.classList.add('filtered');
-  }
-
-  requestAnimationFrame(displayMatches);
+  progressBar.classList.remove('on');
+  countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
 };
 
-const processQuery = (deadline) => {
-  while (
-    // TODO 0.75 should be an intuitively named top-level constant
-    // TODO if possible, expose what 0.75 represents to the UI and allow the user to control it
-    parseInt(deadline.timeRemaining() * 0.75, 10) > 0
-      && state.queueIndex < state.devs.length
-  ) {
-    const dev = state.devs[state.queueIndex];
-    const matched = state.queryHandler(state.query, dev);
-    if (matched === true) {
-      state.processQueue.push(dev.id);
-    }
-    state.queueIndex += 1;
-  }
+const runQuery = async (input) => {
+  const userInput = input.toLowerCase();
+  if (userInput === '') return;
 
-  requestAnimationFrame(displayMatches);
-  if (state.queueIndex < state.devs.length) {
-    requestIdleCallback(processQuery);
-  }
-};
-
-const queryData = ({ target }) => {
-  if (state.status === 'LOADING') return;
-
-  const utterance = (target.value || '').toLowerCase();
-  const dataWrap = document.querySelector('[data-collection-wrap]');
-  const devsLen = state.devs.length;
-  const queryStatus = getCountDisplay();
-  const ageStatus = getAgeDisplay();
-  if (utterance === '') {
-    dataWrap.classList.remove('filtered');
-    ageStatus().textContent = '';
-    queryStatus().textContent = `${devsLen} of ${devsLen}`;
-    return;
-  }
-
-  const parts = utterance.split(/&\s*/).map((q) => (q || '').trim());
+  const parts = userInput.split(/&\s*/).map((q) => (q || '').trim());
   const query = parts[parts.length - 1];
   const isInValidQuery = query.length <= 2;
+  if (isInValidQuery) return;
 
-  if (isInValidQuery) {
-    dataWrap.classList.remove('filtered');
-    ageStatus().textContent = '';
-    queryStatus().textContent = `${devsLen} of ${devsLen}`;
-    return;
-  }
-
-  const qHandler = state.queryHandlers.find(({ matcher }) => matcher
-    && matcher.test(query) === true);
-
-  if (!qHandler) {
-    dataWrap.classList.remove('filtered');
-    ageStatus().textContent = '';
-    queryStatus().textContent = `${devsLen} of ${devsLen}`;
-    return;
-  }
-
-  state.matched = [];
-  state.query = query;
-  state.queueIndex = 0;
-  state.processQueue = [];
-  state.queryHandler = qHandler.handler;
-
-  requestIdleCallback(processQuery);
+  uiState.devsToRender = await OMT.runQuery(query);
+  requestIdleCallback(renderAPage);
 };
 
-const displayData = () => {
-  const queue = state.processQueue.splice(0);
-  console.log(`Load Queue: ${queue.length}`);
+let queryPromise = Promise.resolve();
+const onSearchInput = ({ target }) => {
+  if (uiState.searchDebouncer) clearTimeout(uiState.searchDebouncer);
 
-  const devsLength = state.devs.length;
-  const recordStatus = getCountDisplay();
-  recordStatus().textContent = `${state.queueIndex} of ${devsLength}`;
+  const input = (target.value || '').trim();
+  if (input === '') return;
 
-  if (state.queueIndex >= devsLength - 1) {
-    // TODO `.classList.remove('on');` call means internal implementation details are leaking out
-    pBar().classList.remove('on');
-  }
-
-  if (queue.length <= 0) return;
-
-  pBar().value = state.queueIndex;
-  const domParser = getDomParser();
-  const nodes = domParser().parseFromString(queue.join(''), 'text/html');
-
-  const content = getContentArea();
-  nodes.body.childNodes.forEach((n) => {
-    content().appendChild(n);
-    iObserver.observe(n);
-  });
-
-  requestAnimationFrame(displayData);
+  uiState.searchDebouncer = setTimeout(() => {
+    queryPromise.then(() => {
+      queryPromise = runQuery(input);
+      return queryPromise;
+    });
+  }, 1000);
 };
-
-const timeIsRemaining = (deadline) => {
-  if (deadline && typeof deadline.timeRemaining === 'function') {
-    // TODO 0.25 should be an intuitively named top-level constant
-    // TODO if possible, expose what 0.25 represents to the UI and allow the user to control it
-    return parseInt(deadline.timeRemaining() * 0.25, 10) > 0;
-  }
-  return false;
-};
-
-const queueHasItems = () => state.queueIndex < state.devs.length;
 
 const enableSmartSearch = () => {
-  state.queryHandlers = [];
-  state.queryHandlers.push(dobInMonthOrYear());
-  state.queryHandlers.push(dobInHalfAYear());
-  state.queryHandlers.push(dobInQuarters());
-  state.queryHandlers.push(skillByCompetency());
-
-  const searchField = document.querySelector('input');
-  searchField.addEventListener('input', queryData);
+  const searchField = select('input');
+  searchField.addEventListener('input', onSearchInput);
   searchField.focus();
+
+  let tourId;
+  let tourIndex = 0;
+  const tour = [
+    '',
+    'make your move ...',
+    'start by typing @ or #',
+    'there\'s so much you can do',
+    ''
+  ];
+
+  const endTourOnClick = () => {
+    if (tourId) {
+      clearInterval(tourId);
+      tourIndex = 0;
+      requestAnimationFrame(() => {
+        searchField.setAttribute('placeholder', '');
+      });
+    }
+  };
+  searchField.addEventListener('click', endTourOnClick);
+
+  tourId = setInterval(() => {
+    requestAnimationFrame(() => {
+      searchField.setAttribute('placeholder', tour[tourIndex]);
+      tourIndex = (tourIndex + 1) % tour.length;
+    });
+  }, 3000);
 };
 
-const processData = (deadline) => {
-  state.status = 'LOADING';
-  while (timeIsRemaining(deadline) && queueHasItems()) {
-    state.processQueue.push(makeARow(state.devs[state.queueIndex]));
-    state.queueIndex += 1;
-  }
-
-  requestAnimationFrame(displayData);
-  if (queueHasItems()) {
-    requestIdleCallback(processData);
-    return;
-  }
-
-  state.status = 'IDLE';
-  enableSmartSearch();
-};
-
-const handleResponse = ([data]) => {
-  console.log('Received API data ...');
+const handleFecthResponse = async ([data]) => {
   const { developers } = data;
+  progressBar.value = developers.length;
+  log(`Received ${developers.length} devs data ...`);
 
-  state.devs = developers;
-  state.queueIndex = 0;
-  state.processQueue = [];
+  if (!uiState.displayedFirstPage) {
+    const payload = { developers, isFirstPage: true, pageSize: uiState.pageSize };
+    const { devsToRender } = await OMT.processDeveloperData(payload);
 
-  pBar().setAttribute('max', state.devs.length);
-  pBar().classList.add('on');
-  requestIdleCallback(processData);
+    progressBar.value = devsToRender.length;
+    uiState.devsToRender = devsToRender;
+    uiState.allDevsCount += devsToRender.length;
+
+    requestAnimationFrame(renderAPage);
+    enableSmartSearch();
+    uiState.displayedFirstPage = true;
+  }
+
+  const { devsCount } = await OMT.processDeveloperData();
+  uiState.allDevsCount += (devsCount - uiState.pageSize);
+  requestAnimationFrame(() => {
+    countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
+  });
 };
 
-const fetchData = () => {
-  const APIBase = 'https://randomapi.com/api';
-  const APIKey = 'b02322d7f185419feaab65646b807469';
-  const endpoint = `${APIBase}/${APIKey}`;
+const fetchData = async () => {
+  const APIBase = 'https://randomapi.com/api/3qjlr7d4';
+  const APIKey = 'LEIX-GF3O-AG7I-6J84';
 
-  fetch(endpoint)
+  // TODO expose devQty from the UI
+  const endpoint = `${APIBase}?key=${APIKey}&qty=${uiState.devQty}`;
+
+  progressBar.setAttribute('max', uiState.devQty);
+  progressBar.classList.add('on');
+
+  // TODO when we upgrade to streams, communicate
+  // fetch progress with the progress bar
+  return fetch(endpoint)
     .then((response) => response.json())
-    .then(({ results }) => handleResponse(results))
-    .catch((error) => console.log(error));
+    .then(({ results }) => handleFecthResponse(results))
+    .catch((error) => log(error));
 };
 
 const startApp = () => {
   // TODO the query field should get focus when the app loads
   // TODO consider allowing search input even before data arrives, especially on very slow networks
   // TODO respect data-saver settings and dont fetch images in 2G connections
+  // OMT = wrap(new Worker('./js/omt.js', { type: 'module' }));
   fetchData();
 };
 

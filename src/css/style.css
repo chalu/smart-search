@@ -1,3 +1,8 @@
+body {
+  margin: 0;
+  background: #eee;
+}
+
 progress {
   width: 100%;
   position: fixed;
@@ -25,11 +30,15 @@ progress.on {
   display: block;
   width: calc(100% - 1em);
   outline: none;
-  border-bottom: 1px solid #ccc;
+  border-radius: 3px;
 }
 
 [data-search-wrap] input:focus {
   outline: none;
+}
+
+[data-search-wrap] input::placeholder {
+  color: #999;
 }
 
 [data-search-wrap] p {
@@ -53,25 +62,20 @@ progress.on {
 [data-collection-wrap] {
   display: flex;
   margin: auto;
-  -ms-flex: 1 1 auto;
   flex: 1 1 auto;
-  -ms-flex-wrap: wrap;
   flex-wrap: wrap;
-  -ms-flex-pack: justify;
-  justify-content: space-between;
+  justify-content: space-evenly;
 }
 
 .dev-item {
-  cursor: pointer;
-  display: -ms-inline-flexbox;
-  display: inline-flex;
-  -ms-flex-pack: distribute;
+  display: flex;
   justify-content: start;
   max-height: 64px;
   width: 165px;
-  margin: 5px;
+  margin: 8px;
+  background: #fff;
   box-shadow: 0 3px 3px -2px rgba(0, 0, 0, 0.2), 0 3px 4px 0 rgba(0, 0, 0, 0.14), 0 1px 8px 0 rgba(0, 0, 0, 0.12);
-  transition: opacity 0.5s ease-in display 1.5s ease-out;
+  transition: opacity 1s ease-in;
 }
 
 [data-collection-wrap].filtered .dev-item {
@@ -83,6 +87,17 @@ progress.on {
   display: -ms-inline-flexbox;
   display: inline-flex;
   opacity: 1;
+}
+
+.dev-item .avatar {
+  background: #ddd;
+  width: 64px;
+  height: 64px;
+}
+
+.dev-item .about {
+  margin-left: 5px;
+  margin-top: 5px;
 }
 
 .dev-item img {
