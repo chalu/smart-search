@@ -342,15 +342,7 @@ const renderAPage = () => {
   countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
 };
 
-const runQuery = async (input) => {
-  const userInput = input.toLowerCase();
-  if (userInput === '') return;
-
-  const parts = userInput.split(/&\s*/).map((q) => (q || '').trim());
-  const query = parts[parts.length - 1];
-  const isInValidQuery = query.length <= 2;
-  if (isInValidQuery) return;
-
+const runQuery = async (query) => {
   uiState.devsToRender = await OMT.runQuery(query);
   requestIdleCallback(renderAPage);
 };
@@ -361,6 +353,9 @@ const onSearchInput = ({ target }) => {
 
   const input = (target.value || '').trim();
   if (input === '') return;
+
+  const queryFormat = /[@|#]\w+\s*[=]\s*\w+/;
+  if (!queryFormat.test(input)) return;
 
   uiState.searchDebouncer = setTimeout(() => {
     queryPromise.then(() => {
