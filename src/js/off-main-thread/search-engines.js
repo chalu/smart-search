@@ -1,5 +1,5 @@
-import arrayviewer from './array-wrap';
-import { getState, getMonths } from './state';
+import arrayviewer from './array-wrap.js';
+import { getState, getMonths } from './state.js';
 
 const searchByFaningOut = (payload) => {
   const { midIndex, data, isEQ } = payload;

@@ -24,10 +24,10 @@
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
 
-// import { wrap } from 'https://unpkg.com/comlink@4.3.0/dist/esm/comlink.mjs';
+import { wrap } from 'https://unpkg.com/comlink@4.3.0/dist/esm/comlink.mjs';
 // import { wrap } from 'comlink';
 
-import OMT from './off-main-thread/omt.js';
+// import OMT from './off-main-thread/omt.js';
 import { log, useDOMSelector, getDomParser } from './ui-utils.js';
 
 const uiState = {
@@ -60,7 +60,7 @@ const uiState = {
   searchDebouncer: undefined
 };
 
-// let OMT;
+let OMT;
 const domParser = getDomParser();
 const { select } = useDOMSelector();
 const progressBar = select('progress');
@@ -212,8 +212,9 @@ const fetchData = async () => {
     .catch((error) => log(error));
 };
 
-const startApp = () => {
-  // OMT = wrap(new Worker('./js/omt.js', { type: 'module' }));
+const startApp = async () => {
+  const worker = new Worker('./js/off-main-thread/omt.js');
+  OMT = wrap(worker);
   fetchData();
 };
 

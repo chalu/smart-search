@@ -1,4 +1,4 @@
-import { produce } from 'immer';
+import { produce } from 'https://cdn.jsdelivr.net/npm/immer@7.0.8/dist/immer.esm.js';
 
 let STATE = {
   query: '',
