@@ -33,23 +33,35 @@ const months = [
 ];
 
 const searchByFaningOut = (payload) => {
-  const { start, data, isEQ } = payload;
-  console.log(`faning out @ [${start}]`);
+  const { midIndex, data, isEQ } = payload;
+  const start = data.start + midIndex;
+  console.log(`fanning out @ [${midIndex}], which resolves to [${start}]`);
+  console.log(`your results should be the closest neighbours of [${start}] ....`);
 
-  let left = start;
-  let right = start + 1;
+  let left = midIndex;
+  let right = midIndex;
 
   while (left > 0) {
-    if (isEQ(data.get(left - 1))) left -= 1;
-    else break;
+    if (isEQ(data.get(left - 1))) {
+      left -= 1;
+    } else {
+      break;
+    }
   }
 
   while (right < data.length) {
-    if (!isEQ(data.get(right))) break;
-    right += 1;
+    if (isEQ(data.get(right + 1))) {
+      right += 1;
+    } else {
+      break;
+    }
   }
 
-  return data.viewAs(left, right).toArray().filter(isEQ);
+  const effectiveLeft = start - (midIndex - left);
+  // Add 1 to make room in effectiveRight for
+  // array.slice() which is what .toArray() uses
+  const effectiveRight = start + (right - midIndex) + 1;
+  return data.viewAs(effectiveLeft, effectiveRight).toArray().filter(isEQ);
 };
 
 const runBinarySearch = (payload) => {
@@ -65,7 +77,7 @@ const runBinarySearch = (payload) => {
   const { midItem, midIndex } = partition;
   if (isEQ(midItem) === true) {
     return searchByFaningOut({
-      start: midIndex, data, isEQ
+      midIndex, data, isEQ
     });
   }
 
@@ -82,7 +94,6 @@ const searchByYearOfBirth = (query) => {
   // = (e.g @dob = 1990). TODO: add support
   // for !=, >, >=, <, <=
   const qry = (query.split(/=\s*/)[1] || '').trim();
-  console.log(`qry: ${qry}`);
 
   // search by 4 digit year, e.g 1985
   if (/\d{4}/.test(qry)) {
@@ -133,7 +144,7 @@ const sortDevs = async (developers) => {
       draft.sorted[type] = sorted.map(indexer);
     });
   });
-  // console.log(state.sorted);
+  // console.log(state.sorted.byYearOfBirth);
 };
 
 const devToDOMString = (dev) => {
@@ -219,7 +230,7 @@ const runQuery = async (query) => {
   });
 
   const matchingIndexes = engine.search(query);
-  console.log(matchingIndexes);
+  // console.log(matchingIndexes);
 
   if (matchingIndexes && matchingIndexes.length > 0) {
     const gatherer = new Array(matchingIndexes.length);
