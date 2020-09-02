@@ -9,29 +9,30 @@
   "scripts": {
     "test": "jest --coverage",
     "lint": "eslint \"src/**/*.js\"",
-    "start": "parcel ./src/index.html",
-    "build": "parcel build ./src/index.html --experimental-scope-hoisting --no-source-maps"
+    "worker-to-dist": "copyfiles -u 1 src/js/off-main-thread/omt.js dist",
+    "js-to-dist": "copyfiles -u 1 src/js/*.js dist",
+    "html-to-dist": "copyfiles -u 1 src/*.html dist",
+    "imgs-to-dist": "copyfiles -u 1 src/images/favicons/* dist",
+    "build": "npm run html-to-dist && npm run worker-to-dist && npm run js-to-dist && npm run imgs-to-dist"
   },
   "author": {
     "name": "Charles Odili",
     "email": "chaluwa@gmail.com"
   },
   "license": "MIT",
-  "dependencies": {
-    "comlink": "^4.3.0",
-    "immer": "^7.0.7"
-  },
   "devDependencies": {
+    "@babel/cli": "^7.11.5",
     "@babel/core": "^7.9.0",
     "@babel/preset-env": "^7.9.5",
     "babel-jest": "^25.4.0",
+    "copyfiles": "^2.3.0",
     "eslint": "^7.6.0",
     "eslint-config-airbnb-base": "^14.2.0",
     "eslint-plugin-import": "^2.22.0",
-    "jest": "^25.4.0",
-    "parcel-bundler": "^1.12.4"
+    "jest": "^25.4.0"
   },
   "browserslist": [
     "last 1 Chrome versions"
-  ]
+  ],
+  "dependencies": {}
 }
