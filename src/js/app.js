@@ -412,7 +412,10 @@ const handleFecthResponse = async ([data]) => {
     uiState.devsToRender = devsToRender;
     uiState.allDevsCount += devsToRender.length;
 
-    requestAnimationFrame(renderAPage);
+    requestAnimationFrame(() => {
+      select('body').classList.add('ready');
+      requestAnimationFrame(renderAPage);
+    });
     enableSmartSearch();
     uiState.displayedFirstPage = true;
   }
