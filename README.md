@@ -55,4 +55,3 @@ This app will be a PWA that attempts to do these and more. It should be smart en
 *   Enable pagination over search results when they exceed the page size
 
 *   Record count (i.e 12 of 1500) should reflect search results and indicate page being viewed
-

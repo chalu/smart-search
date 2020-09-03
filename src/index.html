@@ -77,12 +77,12 @@
       }
 
       [data-collection-wrap] {
-        min-height: 490px;
+        /* min-height: 490px; */
         display: flex;
         margin: auto;
         flex: 1 1 auto;
         flex-wrap: wrap;
-        justify-content: space-evenly;
+        justify-content: flex-start;
       }
 
       .dev-item {
@@ -129,6 +129,17 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      @media screen and (max-width: 360px) {
+        [data-collection-wrap] {
+          margin: 0 auto;
+          width: 98%;
+        }
+
+        [data-collection-wrap] .dev-item {
+          width: 160px;
+        }
       }
 
       /*-------------------

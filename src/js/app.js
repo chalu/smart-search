@@ -146,22 +146,29 @@ const enableSmartSearch = () => {
     'there\'s so much you can do',
     ''
   ];
+  const getNextTourStep = () => {
+    const step = tour[tourIndex];
+    tourIndex = (tourIndex + 1) % tour.length;
+    return step;
+  };
 
   const endTourOnClick = () => {
-    if (tourId) {
-      clearInterval(tourId);
-      tourIndex = 0;
-      requestAnimationFrame(() => {
-        searchField.setAttribute('placeholder', '');
-      });
-    }
+    requestIdleCallback(() => {
+      if (tourId) {
+        tourIndex = 0;
+        requestAnimationFrame(() => {
+          searchField.setAttribute('placeholder', '');
+        });
+        clearInterval(tourId);
+      }
+    });
   };
   searchField.addEventListener('click', endTourOnClick);
 
   tourId = setInterval(() => {
     requestAnimationFrame(() => {
-      searchField.setAttribute('placeholder', tour[tourIndex]);
-      tourIndex = (tourIndex + 1) % tour.length;
+      const step = getNextTourStep();
+      searchField.setAttribute('placeholder', `${step}`);
     });
   }, 3000);
 };
