@@ -162,7 +162,7 @@ const enableSmartSearch = () => {
 
   tourId = setInterval(() => {
     requestAnimationFrame(() => {
-      searchField.setAttribute('placeholder', tour[tourIndex]);
+      searchField.setAttribute('placeholder', `${tour[tourIndex]}`);
       tourIndex = (tourIndex + 1) % tour.length;
     });
   }, 3000);

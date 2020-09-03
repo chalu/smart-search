@@ -76,7 +76,6 @@ const getMonths = () => [
 ];
 
 /**
- * 
  * Search engines
  */
 const searchByFaningOut = (payload) => {
@@ -163,7 +162,7 @@ const searchByYearOfBirth = (query) => {
     });
   }
 
-  return undefined;
+  return [];
 };
 
 const searchByMonthOfBirth = (query) => [query];
@@ -186,9 +185,9 @@ const engines = [
     matcher: /^@dob\s*=\s*[a-z]{3,}$/i,
     sorter: (devA, devB) => devA.bio.dob.getMonth() - devB.bio.dob.getMonth(),
     indexer: (dev) => {
-      const mob = dev.bio.dob.getMonth();
       const months = getMonths();
-      return { id: dev.id, mob: months[mob] };
+      const mob = months[dev.bio.dob.getMonth()];
+      return { id: dev.id, mob };
     },
     search: searchByMonthOfBirth
   }
@@ -203,14 +202,16 @@ const sortDevs = async (developers) => {
   engines.forEach(({ type, sorter, indexer }) => {
     const sorted = devs.sort(sorter);
     setState((draft) => {
-      draft.sorted[type] = sorted.map(indexer);
+      draft.sorted[`${type}`] = sorted.map(indexer);
     });
   });
   // console.log(getState().sorted.byYearOfBirth);
 };
 
 const devToDOMString = (dev) => {
-  const { id, avatar, bio, country } = dev;
+  const {
+    id, avatar, bio, country
+  } = dev;
 
   const dob = new Date(bio.dob);
   const names = bio.name.split(' ');
@@ -299,7 +300,7 @@ const runQuery = async (query) => {
     const gatherer = new Array(matchingIndexes.length);
     const matched = matchingIndexes.reduce((matches, { id }, pos) => {
       const state = getState();
-      const dev = state.developers[id];
+      const dev = state.developers[`${id}`];
       if (dev) matches[pos] = dev.domString;
       return matches;
     }, gatherer);
