@@ -8,17 +8,18 @@
 
 > This Is Still Work In Progress
 
-Imagine fetching data from a REST API without pagination support, and you end up with 50k records of developers in a web app. How might a frontend app handle loading and displaying such data. Imagine needing to query all 50k records for developers born in August, or everyone except those born in the 3rd quarter of the year. Something like entering a query like `@dob = Aug` or `@dob != Q3` into a search field that gives you auto-complete suggestions for the query you are about to type.
+Imagine fetching data from a REST API without pagination support, and you end up with 50k records in your app. How might a frontend app handle loading and displaying such data. Imagine needing to search all 50k records for entries of people (they are developers) born in August, or everyone except those born in the 3rd quarter of the year. Something like entering a query like `@dob = Aug` or `@dob != Q3` into a search field that gives you auto-complete suggestions for the query you are about to type, and then returns matching records as fast as possible, but without ever impacting UX (e.g user can scroll while the search is on-going).
 
-The assumption is that you have no control over the server's response and must tackle all the issues from within the frontend application.
+The assumption is that you have no control over the server's response and cannot design your way around what is sent from the server, so you must tackle all issues from within the frontend application.
 
-This app will be a PWA that attempts to do these and more. It is snamrt enough to respect network conditions and the user's data saver preferences.
+This app will be a PWA that attempts to do these and more. It should be smart enough to respect network conditions and the user's data saver preferences.
 
 ## Current Features
 
 *   Search by year or birth. E.g `@dob = 1989`
-*   Uses custom built *binary search* algorithm to return a collection of search matches and achieve at least `O(log n)` time complexity while searching over the potentially large dataset
-*   Uses custom built *array-view* and *array-partition* data structures to significantly improve memory usage and prevent unecessary copying of arrays
+*   Uses a custom built index for faster searching. On very memory constrained deveices, this index can be outsourced to an external in-memory store like redis
+*   Uses custom built *binary search* algorithm to match a collection of records and achieve `O(log n)` time complexity while searching over the large dataset
+*   Uses custom built *array-view* and *array-partition* data structures to significantly improve memory usage and prevent unecessary copying of data from the main dataset
 
 ## TODOs
 
