@@ -1,6 +1,23 @@
 importScripts('https://cdn.jsdelivr.net/npm/comlink@4.3.0/dist/umd/comlink.min.js');
 importScripts('https://cdn.jsdelivr.net/npm/immer@7.0.8/dist/immer.umd.production.min.js');
 
+const logr = (realm) => {
+  const style = 'color:#fff;display:block';
+  return {
+    info: (...msgs) => {
+      console.log(`%c Smart-Search (${realm}) %c`, `background:#333;${style}`, '', ...msgs);
+    },
+    error: (...msgs) => {
+      console.error(`%c Smart-Search (${realm}) %c`, `background:darkred;${style}`, '', ...msgs);
+    },
+    warn: (...msgs) => {
+      console.warn(`%c Smart-Search (${realm}) %c`, `background:darkgoldenrod;${style}`, '', ...msgs);
+    }
+  };
+};
+
+const { info } = logr('Worker');
+
 /**
  * array-view and array-partition
  */
@@ -19,7 +36,7 @@ const arrayviewer = (anArray) => {
       this.start = dStart;
       this.end = dEnd || this.end;
       this.length = this.end - this.start;
-      console.log(`down to [${this.start}, ${this.end}] with ${this.length} items`);
+      info(`down to [${this.start}, ${this.end}] with ${this.length} items`);
       return this;
     }
   });
@@ -28,7 +45,7 @@ const arrayviewer = (anArray) => {
   const arraypartition = (opts = {}) => {
     const { at: pivot } = opts;
     const pivotIndex = pivot || Math.floor(view.length / 2);
-    console.log(`${view.length} items`);
+    info(`${view.length} items`);
     return {
       midIndex: pivotIndex,
       midItem: view.get(pivotIndex),
@@ -76,14 +93,13 @@ const getMonths = () => [
 ];
 
 /**
- * 
  * Search engines
  */
 const searchByFaningOut = (payload) => {
   const { midIndex, data, isEQ } = payload;
   const start = data.start + midIndex;
-  console.log(`fanning out @ [${midIndex}], which resolves to [${start}]`);
-  console.log(`your results should be the closest neighbours of [${start}] ....`);
+  info(`fanning out @ [${midIndex}], which resolves to [${start}]`);
+  info(`your results should be the closest neighbours of [${start}] ....`);
 
   let left = midIndex;
   let right = midIndex;
@@ -131,7 +147,7 @@ const runBinarySearch = (payload) => {
   }
 
   const { left, right } = partition;
-  console.log(`pivoting @ [${midIndex}]`);
+  info(`pivoting @ [${midIndex}]`);
   const dataView = isGT(midItem) === true ? left() : right();
   return runBinarySearch({
     isEQ,
@@ -148,7 +164,7 @@ const searchByYearOfBirth = (query) => {
 
   // search by 4 digit year, e.g 1985
   if (/\d{4}/.test(qry)) {
-    console.log('searching by year');
+    info('searching by year');
     const queryYear = parseInt(qry, 10);
     const isGT = ({ yob }) => yob > queryYear;
     const isEQ = ({ yob }) => yob === queryYear;
@@ -163,7 +179,7 @@ const searchByYearOfBirth = (query) => {
     });
   }
 
-  return undefined;
+  return [];
 };
 
 const searchByMonthOfBirth = (query) => [query];
@@ -186,9 +202,9 @@ const engines = [
     matcher: /^@dob\s*=\s*[a-z]{3,}$/i,
     sorter: (devA, devB) => devA.bio.dob.getMonth() - devB.bio.dob.getMonth(),
     indexer: (dev) => {
-      const mob = dev.bio.dob.getMonth();
       const months = getMonths();
-      return { id: dev.id, mob: months[mob] };
+      const mob = months[dev.bio.dob.getMonth()];
+      return { id: dev.id, mob };
     },
     search: searchByMonthOfBirth
   }
@@ -203,14 +219,16 @@ const sortDevs = async (developers) => {
   engines.forEach(({ type, sorter, indexer }) => {
     const sorted = devs.sort(sorter);
     setState((draft) => {
-      draft.sorted[type] = sorted.map(indexer);
+      draft.sorted[`${type}`] = sorted.map(indexer);
     });
   });
-  // console.log(getState().sorted.byYearOfBirth);
+  // info(getState().sorted.byYearOfBirth);
 };
 
 const devToDOMString = (dev) => {
-  const { id, avatar, bio, country } = dev;
+  const {
+    id, avatar, bio, country
+  } = dev;
 
   const dob = new Date(bio.dob);
   const names = bio.name.split(' ');
@@ -284,7 +302,7 @@ const processDeveloperData = async (payload = {}) => {
 };
 
 const runQuery = async (query) => {
-  console.log(query);
+  info(query);
   const engine = engines.find(({ matcher }) => matcher && matcher.test(query) === true);
   if (!engine) return []; // no matches found
 
@@ -293,13 +311,13 @@ const runQuery = async (query) => {
   });
 
   const matchingIndexes = engine.search(query);
-  // console.log(matchingIndexes);
+  info(`found ${matchingIndexes.length} matches ...`);
 
   if (matchingIndexes && matchingIndexes.length > 0) {
     const gatherer = new Array(matchingIndexes.length);
     const matched = matchingIndexes.reduce((matches, { id }, pos) => {
       const state = getState();
-      const dev = state.developers[id];
+      const dev = state.developers[`${id}`];
       if (dev) matches[pos] = dev.domString;
       return matches;
     }, gatherer);

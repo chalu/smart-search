@@ -11,6 +11,10 @@
     <link rel="preload" href="./js/ui-utils.js" as="script" crossorigin />
 
     <style>
+      html, body {
+        height: 100%;
+      }
+
       body {
         margin: 0;
       }
@@ -39,6 +43,11 @@
         margin: 2em auto;
       }
 
+      [data-search-wrap] {
+        margin-top: 0;
+        padding-top: 2em;
+      }
+
       [data-search-wrap] input {
         padding: 0.5em;
         font-size: 1.5em;
@@ -56,6 +65,10 @@
       [data-search-wrap] input::placeholder {
         color: #999;
       }
+
+      /* [data-search-wrap] input::-webkit-search-cancel-button {
+        
+      } */
 
       [data-search-wrap] p {
         min-height: 18px;
@@ -77,12 +90,16 @@
       }
 
       [data-collection-wrap] {
-        min-height: 490px;
+        /* min-height: 490px; */
         display: flex;
         margin: auto;
         flex: 1 1 auto;
         flex-wrap: wrap;
-        justify-content: space-evenly;
+        justify-content: flex-start;
+      }
+
+      [data-collection-wrap] .logo-splash {
+        margin: 0 auto;
       }
 
       .dev-item {
@@ -96,17 +113,6 @@
         transition: opacity 1s ease-in;
       }
 
-      [data-collection-wrap].filtered .dev-item {
-        display: none;
-        opacity: 0;
-      }
-
-      [data-collection-wrap].filtered .dev-item.matched {
-        display: -ms-inline-flexbox;
-        display: inline-flex;
-        opacity: 1;
-      }
-
       .dev-item .avatar {
         background: #ddd;
         width: 64px;
@@ -114,8 +120,9 @@
       }
 
       .dev-item .about {
-        margin-left: 5px;
-        margin-top: 5px;
+        margin: 5px;
+        overflow: hidden;
+        width: 90px;
       }
 
       .dev-item img {
@@ -129,6 +136,36 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      @media screen and (max-width: 360px) {
+        [data-collection-wrap] {
+          margin: 0 auto;
+          width: 98%;
+          position: absolute;
+          top: 15px;
+        }
+
+        .ready [data-collection-wrap] {
+          position: relative;
+          top: auto;
+        }
+
+        [data-collection-wrap] .logo-splash {
+          margin: 15px auto;
+        }
+
+        [data-collection-wrap] .dev-item {
+          width: 160px;
+        }
+
+        [data-collection-wrap] .ui.placeholder {
+          margin: 30px;
+        }
+
+        .dev-item .about {
+          width: 87px;
+        }
       }
 
       /*-------------------
@@ -379,7 +416,7 @@
     </div>
 
     <div data-collection-wrap>
-      <h1>
+      <h1 class="logo-splash">
         <img src="./images/favicons/android-chrome-192x192.png" alt="Smart Search App" />
       </h1>
       <dv class="ui placeholder">
