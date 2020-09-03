@@ -1,34 +1,8 @@
-/* Some Ideas ==========+
-  1. Demostrate impact of data-saver mode, as well as when user is on slow (2G) connections
-
-  2. If posible, demonstrate processing on ui-thread and then with comlink/web-worker.
-     E.g allow the user toggle between these options with a radio button
-
-  3. Consider paginating the records with a sort of re-cycler view and only load images just before
-  they are needed
-
-  4. Consider using components for the UI elements and don't allow their
-     internal implementation details to leak out. Wrap such with a clean API
-    e.g Do pBar.turnOn(); pBar.progressTo(50) or pBar.turnOn().progressTo(50)
-    instead of pBar.classList.remove('off')
-
-  5. If it makes sense, use HTTP streams so that we dont have to wait to
-     fetch all the data before displaying anything. Can be
-     very poor UX on slow connections, even if not displaying any images
-
-  6. Make the logs viewable as part of the app and make the output very beautiful
-
-  7. Make this into a PWA, if it makes sense
-*/
-
 /* eslint-disable import/extensions */
 /* eslint-disable import/no-unresolved */
 
 import { wrap } from 'https://unpkg.com/comlink@4.3.0/dist/esm/comlink.mjs';
-// import { wrap } from 'comlink';
-
-// import OMT from './off-main-thread/omt.js';
-import { log, useDOMSelector, getDomParser } from './ui-utils.js';
+import { logr, useDOMSelector, getDomParser } from './ui-utils.js';
 
 const uiState = {
   /**
@@ -61,6 +35,7 @@ const uiState = {
 };
 
 let OMT;
+const { info, error } = logr('App');
 const domParser = getDomParser();
 const { select } = useDOMSelector();
 const progressBar = select('progress');
@@ -176,7 +151,7 @@ const enableSmartSearch = () => {
 const handleFecthResponse = async ([data]) => {
   const { developers } = data;
   progressBar.value = developers.length;
-  log(`Received ${developers.length} devs data ...`);
+  info(`Received ${developers.length} devs data ...`);
 
   if (!uiState.displayedFirstPage) {
     const payload = { developers, isFirstPage: true, pageSize: uiState.pageSize };
@@ -216,7 +191,7 @@ const fetchData = async () => {
   return fetch(endpoint)
     .then((response) => response.json())
     .then(({ results }) => handleFecthResponse(results))
-    .catch((error) => log(error));
+    .catch((err) => error(err));
 };
 
 const startApp = async () => {
