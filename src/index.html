@@ -2,25 +2,403 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="theme-color" content="#333">
+    <meta name="theme-color" content="#333" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="A simple performant web app with local in-app search magic over a ton of data!" />
+    <link rel="icon" type="image/png" sizes="16x16" href="./images/favicons/favicon-16x16.png" />
     <title>Smart Search</title>
 
-    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="preload" href="./js/ui-utils.js" as="script" crossorigin />
+
+    <style>
+      body {
+        margin: 0;
+      }
+
+      body.ready {
+        background: #eee;
+      }
+
+      progress {
+        width: 100%;
+        position: fixed;
+        left: -5px;
+        top: -7px;
+        right: 0;
+        opacity: 0;
+        transition: opacity 0.5s ease-in;
+      }
+
+      progress.on {
+        opacity: 1;
+      }
+
+      [data-collection-wrap],
+      [data-search-wrap] {
+        width: 90%;
+        margin: 2em auto;
+      }
+
+      [data-search-wrap] input {
+        padding: 0.5em;
+        font-size: 1.5em;
+        border: none;
+        display: block;
+        width: calc(100% - 1em);
+        outline: none;
+        border-radius: 3px;
+      }
+
+      [data-search-wrap] input:focus {
+        outline: none;
+      }
+
+      [data-search-wrap] input::placeholder {
+        color: #999;
+      }
+
+      [data-search-wrap] p {
+        min-height: 18px;
+        display: flex;
+        -ms-flex: 1 1;
+        flex: 1 1;
+        -ms-flex-wrap: wrap;
+        flex-wrap: wrap;
+        -ms-flex-pack: justify;
+        justify-content: space-between;
+        /* text-align: right; */
+      }
+
+      [data-search-wrap] p span {
+        display: -ms-inline-flexbox;
+        display: inline-flex;
+        -ms-flex-pack: distribute;
+        justify-content: space-between;
+      }
+
+      [data-collection-wrap] {
+        min-height: 490px;
+        display: flex;
+        margin: auto;
+        flex: 1 1 auto;
+        flex-wrap: wrap;
+        justify-content: space-evenly;
+      }
+
+      .dev-item {
+        display: flex;
+        justify-content: start;
+        max-height: 64px;
+        width: 165px;
+        margin: 8px;
+        background: #fff;
+        box-shadow: 0 3px 3px -2px rgba(0, 0, 0, 0.2), 0 3px 4px 0 rgba(0, 0, 0, 0.14), 0 1px 8px 0 rgba(0, 0, 0, 0.12);
+        transition: opacity 1s ease-in;
+      }
+
+      [data-collection-wrap].filtered .dev-item {
+        display: none;
+        opacity: 0;
+      }
+
+      [data-collection-wrap].filtered .dev-item.matched {
+        display: -ms-inline-flexbox;
+        display: inline-flex;
+        opacity: 1;
+      }
+
+      .dev-item .avatar {
+        background: #ddd;
+        width: 64px;
+        height: 64px;
+      }
+
+      .dev-item .about {
+        margin-left: 5px;
+        margin-top: 5px;
+      }
+
+      .dev-item img {
+        height: 64px;
+      }
+
+      .dev-item p {
+        margin: 0 0.1em;
+        font-size: 97%;
+        width: 97px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /*-------------------
+          Copied from semantic-ui@2.4.2
+          https://cdn.jsdelivr.net/npm/semantic-ui@2.4.2/dist/semantic.css
+      --------------------*/
+
+      .ui.placeholder {
+        position: static;
+        overflow: hidden;
+        -webkit-animation: placeholderShimmer 2s linear;
+        animation: placeholderShimmer 2s linear;
+        -webkit-animation-iteration-count: infinite;
+        animation-iteration-count: infinite;
+        background-color: #ffffff;
+        background-image: -webkit-gradient(
+          linear,
+          left top,
+          right top,
+          from(rgba(0, 0, 0, 0.08)),
+          color-stop(15%, rgba(0, 0, 0, 0.15)),
+          color-stop(30%, rgba(0, 0, 0, 0.08))
+        );
+        background-image: -webkit-linear-gradient(
+          left,
+          rgba(0, 0, 0, 0.08) 0%,
+          rgba(0, 0, 0, 0.15) 15%,
+          rgba(0, 0, 0, 0.08) 30%
+        );
+        background-image: linear-gradient(
+          to right,
+          rgba(0, 0, 0, 0.08) 0%,
+          rgba(0, 0, 0, 0.15) 15%,
+          rgba(0, 0, 0, 0.08) 30%
+        );
+        background-size: 1200px 100%;
+        width: 30rem;
+        max-width: 30rem;
+      }
+
+      @-webkit-keyframes placeholderShimmer {
+        0% {
+          background-position: -1200px 0;
+        }
+
+        100% {
+          background-position: 1200px 0;
+        }
+      }
+
+      @keyframes placeholderShimmer {
+        0% {
+          background-position: -1200px 0;
+        }
+
+        100% {
+          background-position: 1200px 0;
+        }
+      }
+
+      .ui.placeholder + .ui.placeholder {
+        margin-top: 2rem;
+      }
+
+      .ui.placeholder + .ui.placeholder {
+        -webkit-animation-delay: 0.15s;
+        animation-delay: 0.15s;
+      }
+
+      .ui.placeholder + .ui.placeholder + .ui.placeholder {
+        -webkit-animation-delay: 0.3s;
+        animation-delay: 0.3s;
+      }
+
+      .ui.placeholder + .ui.placeholder + .ui.placeholder + .ui.placeholder {
+        -webkit-animation-delay: 0.45s;
+        animation-delay: 0.45s;
+      }
+
+      .ui.placeholder + .ui.placeholder + .ui.placeholder + .ui.placeholder + .ui.placeholder {
+        -webkit-animation-delay: 0.6s;
+        animation-delay: 0.6s;
+      }
+
+      .ui.placeholder,
+      .ui.placeholder > :before,
+      .ui.placeholder .image.header:after,
+      .ui.placeholder .line,
+      .ui.placeholder .line:after {
+        background-color: #ffffff;
+      }
+
+      /* Image */
+
+      .ui.placeholder .image:not(.header):not(.ui) {
+        height: 100px;
+      }
+
+      .ui.placeholder .square.image:not(.header) {
+        height: 0px;
+        overflow: hidden;
+        /* 1/1 aspect ratio */
+        padding-top: 100%;
+      }
+
+      .ui.placeholder .rectangular.image:not(.header) {
+        height: 0px;
+        overflow: hidden;
+        /* 4/3 aspect ratio */
+        padding-top: 75%;
+      }
+
+      /* Lines */
+
+      .ui.placeholder .line {
+        position: relative;
+        height: 0.85714286em;
+      }
+
+      .ui.placeholder .line:before,
+      .ui.placeholder .line:after {
+        top: 100%;
+        position: absolute;
+        content: '';
+        background-color: inherit;
+      }
+
+      .ui.placeholder .line:before {
+        left: 0px;
+      }
+
+      .ui.placeholder .line:after {
+        right: 0px;
+      }
+
+      /* Any Lines */
+
+      .ui.placeholder .line {
+        margin-bottom: 0.5em;
+      }
+
+      .ui.placeholder .line:before,
+      .ui.placeholder .line:after {
+        height: 0.5em;
+      }
+
+      .ui.placeholder .line:not(:first-child) {
+        margin-top: 0.5em;
+      }
+
+      /* Header Image + 2 Lines */
+
+      .ui.placeholder .header {
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Line Outdent */
+
+      .ui.placeholder .line:nth-child(1):after {
+        width: 0%;
+      }
+
+      .ui.placeholder .line:nth-child(2):after {
+        width: 50%;
+      }
+
+      .ui.placeholder .line:nth-child(3):after {
+        width: 10%;
+      }
+
+      .ui.placeholder .line:nth-child(4):after {
+        width: 35%;
+      }
+
+      .ui.placeholder .line:nth-child(5):after {
+        width: 65%;
+      }
+
+      /* Header Line 1 & 2*/
+
+      .ui.placeholder .header .line {
+        margin-bottom: 0.64285714em;
+      }
+
+      .ui.placeholder .header .line:before,
+      .ui.placeholder .header .line:after {
+        height: 0.64285714em;
+      }
+
+      .ui.placeholder .header .line:not(:first-child) {
+        margin-top: 0.64285714em;
+      }
+
+      .ui.placeholder .header .line:after {
+        width: 20%;
+      }
+
+      .ui.placeholder .header .line:nth-child(2):after {
+        width: 60%;
+      }
+
+      /* Image Header */
+
+      .ui.placeholder .image.header .line {
+        margin-left: 3em;
+      }
+
+      .ui.placeholder .image.header .line:before {
+        width: 0.71428571rem;
+      }
+
+      .ui.placeholder .image.header:after {
+        display: block;
+        height: 0.85714286em;
+        content: '';
+        margin-left: 3em;
+      }
+
+      /* Spacing */
+
+      .ui.placeholder .image .line:first-child,
+      .ui.placeholder .paragraph .line:first-child,
+      .ui.placeholder .header .line:first-child {
+        height: 0.01px;
+      }
+
+      .ui.placeholder .image:not(:first-child):before,
+      .ui.placeholder .paragraph:not(:first-child):before,
+      .ui.placeholder .header:not(:first-child):before {
+        height: 1.42857143em;
+        content: '';
+        display: block;
+      }
+    </style>
   </head>
   <body>
     <progress max="1"></progress>
 
     <div data-search-wrap>
-      <input type="text" />
+      <label>
+        <input type="search" aria-label="Search" />
+      </label>
       <p>
         <span></span>
         <span></span>
       </p>
     </div>
 
-    <div data-collection-wrap></div>
+    <div data-collection-wrap>
+      <h1>
+        <img src="./images/favicons/android-chrome-192x192.png" alt="Smart Search App" />
+      </h1>
+      <dv class="ui placeholder">
+        <div class="image header">
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+
+        <div class="image header">
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+
+        <div class="image header">
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+      </dv>
+    </div>
 
     <script type="module" src="./js/app.js"></script>
   </body>

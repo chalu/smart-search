@@ -1,13 +1,50 @@
-/* eslint-disable import/extensions */
-/* eslint-disable import/no-unresolved */
+importScripts('https://cdn.jsdelivr.net/npm/comlink@4.3.0/dist/umd/comlink.min.js');
+importScripts('https://cdn.jsdelivr.net/npm/immer@7.0.8/dist/immer.umd.production.min.js');
 
-// import expose from 'comlink';
-import { produce } from 'immer';
-import arrayviewer from './array-wrap.js';
+/**
+ * array-view and array-partition
+ */
+const arrayviewer = (anArray) => {
+  const arrayview = () => ({
+    start: 0,
+    end: anArray.length,
+    length: anArray.length - 0,
+    get(index) {
+      return anArray[this.start + index];
+    },
+    toArray() {
+      return anArray.slice(this.start, this.end + 1);
+    },
+    viewAs(dStart, dEnd) {
+      this.start = dStart;
+      this.end = dEnd || this.end;
+      this.length = this.end - this.start;
+      console.log(`down to [${this.start}, ${this.end}] with ${this.length} items`);
+      return this;
+    }
+  });
 
-// enableAllPlugins();
+  const view = arrayview();
+  const arraypartition = (opts = {}) => {
+    const { at: pivot } = opts;
+    const pivotIndex = pivot || Math.floor(view.length / 2);
+    console.log(`${view.length} items`);
+    return {
+      midIndex: pivotIndex,
+      midItem: view.get(pivotIndex),
+      left: () => view.viewAs(view.start, (view.start + pivotIndex) - 1),
+      right: () => view.viewAs((view.start + pivotIndex) + 1)
+    };
+  };
+  view.partition = arraypartition;
 
-let state = {
+  return { ...view };
+};
+
+/**
+ * State management with immer
+ */
+let STATE = {
   query: '',
   queryMatches: [],
   sorted: {
@@ -17,7 +54,13 @@ let state = {
   developers: {}
 };
 
-const months = [
+const getState = () => STATE;
+const setState = (fn) => {
+  STATE = immer.produce(STATE, fn);
+  return STATE;
+};
+
+const getMonths = () => [
   ['Jan', 'January'],
   ['Feb', 'February'],
   ['Mar', 'March'],
@@ -32,24 +75,40 @@ const months = [
   ['Dec', 'December']
 ];
 
+/**
+ * 
+ * Search engines
+ */
 const searchByFaningOut = (payload) => {
-  const { start, data, isEQ } = payload;
-  console.log(`faning out @ [${start}]`);
+  const { midIndex, data, isEQ } = payload;
+  const start = data.start + midIndex;
+  console.log(`fanning out @ [${midIndex}], which resolves to [${start}]`);
+  console.log(`your results should be the closest neighbours of [${start}] ....`);
 
-  let left = start;
-  let right = start + 1;
+  let left = midIndex;
+  let right = midIndex;
 
   while (left > 0) {
-    if (isEQ(data.get(left - 1))) left -= 1;
-    else break;
+    if (isEQ(data.get(left - 1))) {
+      left -= 1;
+    } else {
+      break;
+    }
   }
 
   while (right < data.length) {
-    if (!isEQ(data.get(right))) break;
-    right += 1;
+    if (isEQ(data.get(right + 1))) {
+      right += 1;
+    } else {
+      break;
+    }
   }
 
-  return data.viewAs(left, right).toArray().filter(isEQ);
+  const effectiveLeft = start - (midIndex - left);
+  // Add 1 to make room in effectiveRight for
+  // array.slice() which is what .toArray() uses
+  const effectiveRight = start + (right - midIndex) + 1;
+  return data.viewAs(effectiveLeft, effectiveRight).toArray().filter(isEQ);
 };
 
 const runBinarySearch = (payload) => {
@@ -65,7 +124,9 @@ const runBinarySearch = (payload) => {
   const { midItem, midIndex } = partition;
   if (isEQ(midItem) === true) {
     return searchByFaningOut({
-      start: midIndex, data, isEQ
+      midIndex,
+      data,
+      isEQ
     });
   }
 
@@ -73,7 +134,9 @@ const runBinarySearch = (payload) => {
   console.log(`pivoting @ [${midIndex}]`);
   const dataView = isGT(midItem) === true ? left() : right();
   return runBinarySearch({
-    isEQ, isGT, data: dataView
+    isEQ,
+    isGT,
+    data: dataView
   });
 };
 
@@ -82,7 +145,6 @@ const searchByYearOfBirth = (query) => {
   // = (e.g @dob = 1990). TODO: add support
   // for !=, >, >=, <, <=
   const qry = (query.split(/=\s*/)[1] || '').trim();
-  console.log(`qry: ${qry}`);
 
   // search by 4 digit year, e.g 1985
   if (/\d{4}/.test(qry)) {
@@ -91,65 +153,75 @@ const searchByYearOfBirth = (query) => {
     const isGT = ({ yob }) => yob > queryYear;
     const isEQ = ({ yob }) => yob === queryYear;
     const isLTE = ({ yob }) => yob <= queryYear;
-    const data = arrayviewer(state.sorted.byYearOfBirth);
+    const data = arrayviewer(getState().sorted.byYearOfBirth);
 
     return runBinarySearch({
-      isEQ, isGT, isLTE, data
+      isEQ,
+      isGT,
+      isLTE,
+      data
     });
   }
 
   return undefined;
 };
 
-const searchByMonthOfBirth = (query) => {};
+const searchByMonthOfBirth = (query) => [query];
 
-const engines = [{
-  type: 'byYearOfBirth',
-  // match @dob = 1985
-  matcher: /^@dob\s*=\s*\d{4}$/i,
-  sorter: (devA, devB) => devA.bio.dob - devB.bio.dob,
-  indexer: (dev) => {
-    const yob = dev.bio.dob.getFullYear();
-    return { id: dev.id, yob };
+const engines = [
+  {
+    type: 'byYearOfBirth',
+    // match @dob = 1985
+    matcher: /^@dob\s*=\s*\d{4}$/i,
+    sorter: (devA, devB) => devA.bio.dob - devB.bio.dob,
+    indexer: (dev) => {
+      const yob = dev.bio.dob.getFullYear();
+      return { id: dev.id, yob };
+    },
+    search: searchByYearOfBirth
   },
-  search: searchByYearOfBirth
-}, {
-  type: 'byMonthOfBirth',
-  // TODO change this: match @dob = Aug | August
-  matcher: /^@dob\s*=\s*[a-z]{3,}$/i,
-  sorter: (devA, devB) => devA.bio.dob.getMonth() - devB.bio.dob.getMonth(),
-  indexer: (dev) => {
-    const mob = dev.bio.dob.getMonth();
-    return { id: dev.id, mob: months[mob] };
-  },
-  search: searchByMonthOfBirth
-}];
+  {
+    type: 'byMonthOfBirth',
+    // TODO change this: match @dob = Aug | August
+    matcher: /^@dob\s*=\s*[a-z]{3,}$/i,
+    sorter: (devA, devB) => devA.bio.dob.getMonth() - devB.bio.dob.getMonth(),
+    indexer: (dev) => {
+      const mob = dev.bio.dob.getMonth();
+      const months = getMonths();
+      return { id: dev.id, mob: months[mob] };
+    },
+    search: searchByMonthOfBirth
+  }
+];
+
+/**
+ * OMT processing
+ */
 
 const sortDevs = async (developers) => {
   const devs = developers.slice();
   engines.forEach(({ type, sorter, indexer }) => {
     const sorted = devs.sort(sorter);
-    state = produce(state, (draft) => {
+    setState((draft) => {
       draft.sorted[type] = sorted.map(indexer);
     });
   });
-  // console.log(state.sorted);
+  // console.log(getState().sorted.byYearOfBirth);
 };
 
 const devToDOMString = (dev) => {
-  const {
-    id, avatar, bio, country
-  } = dev;
+  const { id, avatar, bio, country } = dev;
 
   const dob = new Date(bio.dob);
   const names = bio.name.split(' ');
   const name = `${names[0]} ${names[1].charAt(0).toUpperCase()}.`;
+  const months = getMonths();
 
   return `
       <div data-dev-id="${id}" class="dev-item">
           <div class="avatar">
               <img data-src="${avatar}" title="${bio.name}"
-                src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 12c1.65 0 3-1.35 3-3s-1.35-3-3-3-3 1.35-3 3 1.35 3 3 3zm0-4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm6 8.58c0-2.5-3.97-3.58-6-3.58s-6 1.08-6 3.58V18h12v-1.42zM8.48 16c.74-.51 2.23-1 3.52-1s2.78.49 3.52 1H8.48zM19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/></svg>' />
+                src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="64" viewBox="0 0 24 24" width="64"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 12c1.65 0 3-1.35 3-3s-1.35-3-3-3-3 1.35-3 3 1.35 3 3 3zm0-4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm6 8.58c0-2.5-3.97-3.58-6-3.58s-6 1.08-6 3.58V18h12v-1.42zM8.48 16c.74-.51 2.23-1 3.52-1s2.78.49 3.52 1H8.48zM19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/></svg>' />
           </div>
           <div class="about">
               <p>${name}</p>
@@ -162,6 +234,7 @@ const devToDOMString = (dev) => {
 
 const dataToDev = (dev) => {
   const { bio } = dev;
+  const months = getMonths();
 
   bio.dob = new Date(bio.dob);
   bio.yob = bio.dob.getFullYear();
@@ -188,24 +261,25 @@ const processDeveloperData = async (payload = {}) => {
   let devs = developers;
   if (isFirstPage === true) {
     devs = developers.slice(0, pageSize);
-    state = produce(state, (draft) => {
+    setState((draft) => {
       makeDevs(devs, draft.developers);
       draft.staging = developers.slice(pageSize);
     });
 
+    const state = getState();
     const devsToRender = Object.values(state.developers).map((d) => d.domString);
     return { devsToRender };
   }
 
-  state = produce(state, (draft) => {
+  setState((draft) => {
     if (draft.staging.length > 0) devs = [...draft.staging, ...devs];
     makeDevs(devs, draft.developers);
     draft.staging = [];
   });
 
   // TODO dont sort the entire collection every time!!
+  const state = getState();
   sortDevs(Object.values(state.developers));
-
   return { devsCount: Object.keys(state.developers).length };
 };
 
@@ -214,24 +288,27 @@ const runQuery = async (query) => {
   const engine = engines.find(({ matcher }) => matcher && matcher.test(query) === true);
   if (!engine) return []; // no matches found
 
-  state = produce(state, (draft) => {
+  setState((draft) => {
     draft.query = query;
   });
 
   const matchingIndexes = engine.search(query);
-  console.log(matchingIndexes);
+  // console.log(matchingIndexes);
 
   if (matchingIndexes && matchingIndexes.length > 0) {
     const gatherer = new Array(matchingIndexes.length);
     const matched = matchingIndexes.reduce((matches, { id }, pos) => {
+      const state = getState();
       const dev = state.developers[id];
       if (dev) matches[pos] = dev.domString;
       return matches;
     }, gatherer);
 
-    state = produce(state, (draft) => {
+    setState((draft) => {
       draft.queryMatches = matched;
     });
+
+    const state = getState();
     return state.queryMatches;
   }
 
@@ -239,13 +316,10 @@ const runQuery = async (query) => {
 };
 
 /**
- * exposed Analyzer "API"
+ * exposed web-worker-ready "API"
  */
-const OMTInterface = {
+const OffMainThreadAPI = {
   runQuery,
   processDeveloperData
 };
-
-export default OMTInterface;
-
-// expose(OMTInterface);
+Comlink.expose(OffMainThreadAPI);
