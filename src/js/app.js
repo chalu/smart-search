@@ -71,11 +71,10 @@ const countDisplay = select('[data-search-wrap] span:nth-child(1)');
 //   return false;
 // };
 
-const renderAPage = () => {
-  const items = uiState.devsToRender.slice();
-  const nodes = domParser().parseFromString(items.join(''), 'text/html');
+const renderAPage = (nodes) => () => {
   contentArea.innerHTML = '';
-  nodes.body.childNodes.forEach((node) => {
+  const { childNodes } = nodes.body;
+  childNodes.forEach((node) => {
     contentArea.appendChild(node);
     // iObserver.observe(n);
   });
@@ -84,9 +83,17 @@ const renderAPage = () => {
   countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
 };
 
+const renderDevs = () => {
+  requestIdleCallback(() => {
+    const items = uiState.devsToRender.slice();
+    const nodes = domParser().parseFromString(items.join(''), 'text/html');
+    requestAnimationFrame(renderAPage(nodes));
+  }, { timeout: 1500 });
+};
+
 const runQuery = async (query) => {
   uiState.devsToRender = await OMT.runQuery(query);
-  requestIdleCallback(renderAPage);
+  renderDevs();
 };
 
 let queryPromise = Promise.resolve();
@@ -163,7 +170,7 @@ const handleFecthResponse = async ([data]) => {
 
     requestAnimationFrame(() => {
       select('body').classList.add('ready');
-      requestAnimationFrame(renderAPage);
+      renderDevs();
     });
     enableSmartSearch();
     uiState.displayedFirstPage = true;
