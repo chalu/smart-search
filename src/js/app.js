@@ -73,39 +73,39 @@ const countDisplay = select('[data-search-wrap] span:nth-child(1)');
 
 const renderAPage = (batches) => () => rAFQueue(...batches);
 
-const renderDevs = () => {
-  const one = (state) => {
-    const domString = uiState.devsToRender.slice();
-    const dom = domParser().parseFromString(domString.join(''), 'text/html');
-    const { childNodes } = dom.body;
-    state.childNodes = childNodes;
-  };
+const renderDevsStepOne = (state) => {
+  const domString = uiState.devsToRender.slice();
+  const dom = domParser().parseFromString(domString.join(''), 'text/html');
+  const { childNodes } = dom.body;
+  state.childNodes = childNodes;
+};
 
-  const two = (state) => {
-    const nodes = Array.from(state.childNodes);
-    const batchSize = 4;
-    const batches = nodes
-      .map((_, i) => (i % batchSize ? [] : nodes.slice(i, i + batchSize)))
-      .filter((batch) => batch.length >= 1);
+const renderDevsStepTwo = (state) => {
+  const nodes = Array.from(state.childNodes);
+  const batchSize = 4;
+  const batches = nodes
+    .map((_, i) => (i % batchSize ? [] : nodes.slice(i, i + batchSize)))
+    .filter((batch) => batch.length >= 1);
 
-    const chain = batches.map((batch) => () => contentArea.append(...batch));
-    const renderChain = [() => {
-      progressBar.classList.remove('on');
-      countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
-      contentArea.innerHTML = '';
-    }, ...chain];
+  const chain = batches.map((batch) => () => contentArea.append(...batch));
+  const renderChain = [() => {
+    progressBar.classList.remove('on');
+    countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
+    contentArea.innerHTML = '';
+  }, ...chain];
 
-    state.renderFn = renderAPage(renderChain);
-  };
+  state.renderFn = renderAPage(renderChain);
+};
 
-  const three = ({ renderFn }) => renderFn();
+const renderDevsStepThree = ({ renderFn }) => renderFn();
 
-  rICQueue({ state: {} }, one, two, three);
+const scheduleRenderDevs = () => {
+  rICQueue({ state: {} }, renderDevsStepOne, renderDevsStepTwo, renderDevsStepThree);
 };
 
 const runQuery = async (query) => {
   uiState.devsToRender = await OMT.runQuery(query);
-  renderDevs();
+  scheduleRenderDevs();
 };
 
 let queryPromise = Promise.resolve();
@@ -176,7 +176,7 @@ const handleFecthResponse = async ([data]) => {
 
     requestAnimationFrame(() => {
       select('body').classList.add('ready');
-      renderDevs();
+      scheduleRenderDevs();
     });
     enableSmartSearch();
     uiState.displayedFirstPage = true;
@@ -196,9 +196,6 @@ const fetchData = async () => {
   // TODO expose devQty from the UI
   const endpoint = `${APIBase}?key=${APIKey}&qty=${uiState.devQty}`;
 
-  progressBar.setAttribute('max', uiState.devQty);
-  progressBar.classList.add('on');
-
   // TODO when we upgrade to streams, communicate
   // fetch progress with the progress bar
   return fetch(endpoint)
@@ -208,9 +205,12 @@ const fetchData = async () => {
 };
 
 const startApp = async () => {
-  const worker = new Worker('./js/off-main-thread/omt.js');
-  OMT = wrap(worker);
-  fetchData();
+  progressBar.setAttribute('max', uiState.devQty);
+
+  // const worker = new Worker('./js/off-main-thread/omt.js');
+  // OMT = wrap(worker);
+
+  // fetchData();
 };
 
 document.addEventListener('DOMContentLoaded', startApp);
