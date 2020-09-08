@@ -2,7 +2,7 @@
 /* eslint-disable import/no-unresolved */
 
 import { wrap } from 'https://unpkg.com/comlink@4.3.0/dist/esm/comlink.mjs';
-import { logr, useDOMSelector, getDomParser } from './ui-utils.js';
+import { logr, useDOMSelector, getDomParser, rICQueue, rAFQueue } from './ui-utils.js';
 
 const uiState = {
   /**
@@ -71,24 +71,36 @@ const countDisplay = select('[data-search-wrap] span:nth-child(1)');
 //   return false;
 // };
 
-const renderAPage = (nodes) => () => {
-  contentArea.innerHTML = '';
-  const { childNodes } = nodes.body;
-  childNodes.forEach((node) => {
-    contentArea.appendChild(node);
-    // iObserver.observe(n);
-  });
-
-  progressBar.classList.remove('on');
-  countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
-};
+const renderAPage = (batches) => () => rAFQueue(...batches);
 
 const renderDevs = () => {
-  requestIdleCallback(() => {
-    const items = uiState.devsToRender.slice();
-    const nodes = domParser().parseFromString(items.join(''), 'text/html');
-    requestAnimationFrame(renderAPage(nodes));
-  }, { timeout: 1500 });
+  const one = (state) => {
+    const domString = uiState.devsToRender.slice();
+    const dom = domParser().parseFromString(domString.join(''), 'text/html');
+    const { childNodes } = dom.body;
+    state.childNodes = childNodes;
+  };
+
+  const two = (state) => {
+    const nodes = Array.from(state.childNodes);
+    const batchSize = 4;
+    const batches = nodes
+      .map((_, i) => (i % batchSize ? [] : nodes.slice(i, i + batchSize)))
+      .filter((batch) => batch.length >= 1);
+
+    const chain = batches.map((batch) => () => contentArea.append(...batch));
+    const renderChain = [() => {
+      progressBar.classList.remove('on');
+      countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
+      contentArea.innerHTML = '';
+    }, ...chain];
+
+    state.renderFn = renderAPage(renderChain);
+  };
+
+  const three = ({ renderFn }) => renderFn();
+
+  rICQueue({ state: {} }, one, two, three);
 };
 
 const runQuery = async (query) => {
@@ -121,13 +133,7 @@ const enableSmartSearch = () => {
 
   let tourId;
   let tourIndex = 0;
-  const tour = [
-    '',
-    'make your move ...',
-    'start by typing @ or #',
-    'there\'s so much you can do',
-    ''
-  ];
+  const tour = ['', 'make your move ...', 'start by typing @ or #', "there's so much you can do", ''];
   const getNextTourStep = () => {
     const step = tour[tourIndex];
     tourIndex = (tourIndex + 1) % tour.length;
@@ -177,7 +183,7 @@ const handleFecthResponse = async ([data]) => {
   }
 
   const { devsCount } = await OMT.processDeveloperData();
-  uiState.allDevsCount += (devsCount - uiState.pageSize);
+  uiState.allDevsCount += devsCount - uiState.pageSize;
   requestAnimationFrame(() => {
     countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
   });
