@@ -36,7 +36,6 @@ const uiState = {
 
 let OMT;
 const { info, error } = logr('App');
-const domParser = getDomParser();
 const { select } = useDOMSelector();
 const progressBar = select('progress');
 const contentArea = select('[data-collection-wrap]');
@@ -71,36 +70,60 @@ const countDisplay = select('[data-search-wrap] span:nth-child(1)');
 //   return false;
 // };
 
-const renderAPage = (batches) => () => rAFQueue(...batches);
+const renderAPage = (queue) => () => rAFQueue(...queue);
 
-const renderDevsStepOne = (state) => {
-  const domString = uiState.devsToRender.slice();
-  const dom = domParser().parseFromString(domString.join(''), 'text/html');
-  const { childNodes } = dom.body;
-  state.childNodes = childNodes;
-};
-
-const renderDevsStepTwo = (state) => {
-  const nodes = Array.from(state.childNodes);
+const batchDevsToRender = (state) => {
   const batchSize = 4;
-  const batches = nodes
-    .map((_, i) => (i % batchSize ? [] : nodes.slice(i, i + batchSize)))
+  const devs = uiState.devsToRender.slice();
+  const batches = devs
+    .map((_, i) => (i % batchSize ? [] : devs.slice(i, i + batchSize)))
     .filter((batch) => batch.length >= 1);
 
-  const chain = batches.map((batch) => () => contentArea.append(...batch));
-  const renderChain = [() => {
-    progressBar.classList.remove('on');
-    countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
-    contentArea.innerHTML = '';
-  }, ...chain];
+  const placeholders = Array.from(contentArea.querySelectorAll('.dev-item'));
+  state.batches = batches.map((devsInBatch) => () => devsInBatch.forEach((dev) => {
+    if (!dev) return;
+
+    const dom = placeholders.shift();
+    if (!dom) return;
+
+    const {
+      id, avatar, bio, country
+    } = dev;
+
+    dom.setAttribute('data-dev-id', id);
+
+    const img = dom.querySelector('img');
+    img.setAttribute('data-src', avatar);
+    img.setAttribute('title', bio.name);
+
+    dom.querySelector('.about p:nth-child(1)').textContent = bio.shortName;
+    dom.querySelector('.about p:nth-child(2)').textContent = `${bio.mob[0]}, ${bio.yob}`;
+    dom.querySelector('.about p:nth-child(3)').textContent = country;
+  }));
+};
+
+const buildDevsRenderer = (state) => {
+  const renderChain = [
+    () => {
+      progressBar.classList.remove('on');
+      countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
+      const placeholders = contentArea.querySelectorAll('.dev-item');
+      placeholders.forEach((pl) => pl.removeAttribute('listed'));
+    },
+    ...state.batches,
+    () => {
+      const placeholders = Array.from(contentArea.querySelectorAll('.dev-item'));
+      placeholders.slice(0, uiState.pageSize + 1).forEach((pl) => pl.setAttribute('listed', ''));
+    }
+  ];
 
   state.renderFn = renderAPage(renderChain);
 };
 
-const renderDevsStepThree = ({ renderFn }) => renderFn();
+const runDevsRenderer = ({ renderFn }) => renderFn();
 
 const scheduleRenderDevs = () => {
-  rICQueue({ state: {} }, renderDevsStepOne, renderDevsStepTwo, renderDevsStepThree);
+  rICQueue({ state: {} }, batchDevsToRender, buildDevsRenderer, runDevsRenderer);
 };
 
 const runQuery = async (query) => {
@@ -175,8 +198,8 @@ const handleFecthResponse = async ([data]) => {
     uiState.allDevsCount += devsToRender.length;
 
     requestAnimationFrame(() => {
-      select('body').classList.add('ready');
       scheduleRenderDevs();
+      select('body').classList.add('ready');
     });
     enableSmartSearch();
     uiState.displayedFirstPage = true;
@@ -207,10 +230,10 @@ const fetchData = async () => {
 const startApp = async () => {
   progressBar.setAttribute('max', uiState.devQty);
 
-  // const worker = new Worker('./js/off-main-thread/omt.js');
-  // OMT = wrap(worker);
+  const worker = new Worker('./js/off-main-thread/omt.js');
+  OMT = wrap(worker);
 
-  // fetchData();
+  fetchData();
 };
 
 document.addEventListener('DOMContentLoaded', startApp);
