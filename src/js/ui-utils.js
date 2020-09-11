@@ -44,3 +44,13 @@ export const logr = (realm) => {
     }
   };
 };
+
+export const rICQueue = ({ state }, ...fns) => fns.reduce(async (chain, work) => {
+  await requestIdleCallback(() => Promise.resolve());
+  return chain.then(work(state || {}));
+}, Promise.resolve());
+
+export const rAFQueue = (...fns) => fns.reduce(async (chain, work) => {
+  await requestAnimationFrame(() => Promise.resolve());
+  return chain.then(work());
+}, Promise.resolve());

@@ -2,7 +2,9 @@
 /* eslint-disable import/no-unresolved */
 
 import { wrap } from 'https://unpkg.com/comlink@4.3.0/dist/esm/comlink.mjs';
-import { logr, useDOMSelector, getDomParser } from './ui-utils.js';
+import {
+  logr, useDOMSelector, rICQueue, rAFQueue
+} from './ui-utils.js';
 
 const uiState = {
   /**
@@ -36,7 +38,6 @@ const uiState = {
 
 let OMT;
 const { info, error } = logr('App');
-const domParser = getDomParser();
 const { select } = useDOMSelector();
 const progressBar = select('progress');
 const contentArea = select('[data-collection-wrap]');
@@ -71,22 +72,65 @@ const countDisplay = select('[data-search-wrap] span:nth-child(1)');
 //   return false;
 // };
 
-const renderAPage = () => {
-  const items = uiState.devsToRender.slice();
-  const nodes = domParser().parseFromString(items.join(''), 'text/html');
-  contentArea.innerHTML = '';
-  nodes.body.childNodes.forEach((node) => {
-    contentArea.appendChild(node);
-    // iObserver.observe(n);
-  });
+const renderAPage = (queue) => () => rAFQueue(...queue);
 
-  progressBar.classList.remove('on');
-  countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
+const batchDevsToRender = (state) => {
+  const batchSize = 4;
+  const devs = uiState.devsToRender.slice();
+  const batches = devs
+    .map((_, i) => (i % batchSize ? [] : devs.slice(i, i + batchSize)))
+    .filter((batch) => batch.length >= 1);
+
+  const placeholders = Array.from(contentArea.querySelectorAll('.dev-item'));
+  state.batches = batches.map((devsInBatch) => () => devsInBatch.forEach((dev) => {
+    if (!dev) return;
+
+    const dom = placeholders.shift();
+    if (!dom) return;
+
+    const {
+      id, avatar, bio, country
+    } = dev;
+
+    dom.setAttribute('data-dev-id', id);
+
+    const img = dom.querySelector('img');
+    img.setAttribute('data-src', avatar);
+    img.setAttribute('title', bio.name);
+
+    dom.querySelector('.about p:nth-child(1)').textContent = bio.shortName;
+    dom.querySelector('.about p:nth-child(2)').textContent = `${bio.mob[0]}, ${bio.yob}`;
+    dom.querySelector('.about p:nth-child(3)').textContent = country;
+  }));
+};
+
+const padDevsToRenderBatches = (state) => {
+  const renderChain = [
+    () => {
+      progressBar.classList.remove('on');
+      countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
+      const placeholders = contentArea.querySelectorAll('.dev-item');
+      placeholders.forEach((pl) => pl.removeAttribute('listed'));
+    },
+    ...state.batches,
+    () => {
+      const placeholders = Array.from(contentArea.querySelectorAll('.dev-item'));
+      placeholders.slice(0, uiState.pageSize + 1).forEach((pl) => pl.setAttribute('listed', ''));
+    }
+  ];
+
+  state.renderFn = renderAPage(renderChain);
+};
+
+const displayBatchedDevs = ({ renderFn }) => renderFn();
+
+const scheduleRenderDevs = () => {
+  rICQueue({ state: {} }, batchDevsToRender, padDevsToRenderBatches, displayBatchedDevs);
 };
 
 const runQuery = async (query) => {
   uiState.devsToRender = await OMT.runQuery(query);
-  requestIdleCallback(renderAPage);
+  scheduleRenderDevs();
 };
 
 let queryPromise = Promise.resolve();
@@ -114,13 +158,7 @@ const enableSmartSearch = () => {
 
   let tourId;
   let tourIndex = 0;
-  const tour = [
-    '',
-    'make your move ...',
-    'start by typing @ or #',
-    'there\'s so much you can do',
-    ''
-  ];
+  const tour = ['', 'make your move ...', 'start by typing @ or #', "there's so much you can do", ''];
   const getNextTourStep = () => {
     const step = tour[tourIndex];
     tourIndex = (tourIndex + 1) % tour.length;
@@ -161,16 +199,14 @@ const handleFecthResponse = async ([data]) => {
     uiState.devsToRender = devsToRender;
     uiState.allDevsCount += devsToRender.length;
 
-    requestAnimationFrame(() => {
-      select('body').classList.add('ready');
-      requestAnimationFrame(renderAPage);
-    });
+    requestAnimationFrame(() => select('body').classList.add('ready'));
+    scheduleRenderDevs();
     enableSmartSearch();
     uiState.displayedFirstPage = true;
   }
 
   const { devsCount } = await OMT.processDeveloperData();
-  uiState.allDevsCount += (devsCount - uiState.pageSize);
+  uiState.allDevsCount += devsCount - uiState.pageSize;
   requestAnimationFrame(() => {
     countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
   });
@@ -183,9 +219,6 @@ const fetchData = async () => {
   // TODO expose devQty from the UI
   const endpoint = `${APIBase}?key=${APIKey}&qty=${uiState.devQty}`;
 
-  progressBar.setAttribute('max', uiState.devQty);
-  progressBar.classList.add('on');
-
   // TODO when we upgrade to streams, communicate
   // fetch progress with the progress bar
   return fetch(endpoint)
@@ -195,8 +228,11 @@ const fetchData = async () => {
 };
 
 const startApp = async () => {
+  progressBar.setAttribute('max', uiState.devQty);
+
   const worker = new Worker('./js/off-main-thread/omt.js');
   OMT = wrap(worker);
+
   fetchData();
 };
 
