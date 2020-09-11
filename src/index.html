@@ -9,6 +9,9 @@
     <title>Smart Search</title>
 
     <link rel="preload" href="./js/ui-utils.js" as="script" crossorigin />
+
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
     <link rel="prefetch" href="./js/off-main-thread/omt.js" as="worker" crossorigin />
 
     <style>
@@ -18,7 +21,8 @@
       }
 
       body {
-        margin: 0;
+        max-width: 1024px;
+        margin: 0 auto;
         transition: background-color 1s ease;
       }
 
@@ -56,9 +60,15 @@
         font-size: 1.5em;
         border: none;
         display: block;
-        width: calc(100% - 1em);
+        width: 100%;
+        max-width: 800px;
         outline: none;
         border-radius: 3px;
+        transition: box-shadow 2s ease;
+      }
+
+      .ready [data-search-wrap] input {
+        box-shadow: 0 3px 3px -2px rgba(0, 0, 0, 0.2), 0 3px 4px 0 rgba(0, 0, 0, 0.14), 0 1px 8px 0 rgba(0, 0, 0, 0.12);
       }
 
       [data-search-wrap] input:focus {
@@ -190,7 +200,7 @@
       }
 
       .ready .dev-item[listed] .avatar {
-        background-color: #c0c0c0;
+        background-color: #ddd;
       }
 
       .ready .dev-item[listed] img {
@@ -209,10 +219,11 @@
         background-size: auto;
       }
 
-      @media screen and (max-width: 360px) {
+      @media screen and (max-width: 480px) {
         [data-collection-wrap] {
           margin: 0 auto;
           width: 98%;
+          justify-content: center;
         }
 
         [data-collection-wrap] .logo-splash {
@@ -238,7 +249,7 @@
 
     <div data-search-wrap>
       <label>
-        <input type="search" aria-label="Search" />
+        <input type="search" aria-label="Search" placeholder="Warming things up ..." />
       </label>
       <p>
         <span></span>
