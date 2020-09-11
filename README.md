@@ -16,9 +16,7 @@ This app aims to be a PWA that attempts to do the above and more. It should be s
 
 ## Current Features
 
-> Performance is a feature and a key one for this app. Though not listed below, performance and core web vitals scores on web.dev/measure and PSI **should** remain optimal. 
----
-> Performance tracing with simulated throttled CPU (6x slowdown) on slow 3G **should** produce close to no jank.
+> Performance is a major implicit feature for this app. Though not listed below, performance and core web vitals scores on [web.dev/measure](web.dev/measure) and [PSI](https://developers.google.com/speed/pagespeed/insights/) **should** remain optimal. Also, performance tracing with simulated throttled CPU (6x slowdown) and slow 3G (in Chrome DevTools) **should** produce close to no jank
 
 *   Search by year or birth. E.g `@dob = 1989`
 *   Uses a custom built index for faster searching. The index itself incurs some memory cost but it was a sensible tradeoff. I imaging that on very memory-constrained devices, the index can built on-demand and pushed to an external in-memory store like [https://redis.io/](redis)
