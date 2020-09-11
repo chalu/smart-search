@@ -2,7 +2,9 @@
 /* eslint-disable import/no-unresolved */
 
 import { wrap } from 'https://unpkg.com/comlink@4.3.0/dist/esm/comlink.mjs';
-import { logr, useDOMSelector, getDomParser, rICQueue, rAFQueue } from './ui-utils.js';
+import {
+  logr, useDOMSelector, rICQueue, rAFQueue
+} from './ui-utils.js';
 
 const uiState = {
   /**
