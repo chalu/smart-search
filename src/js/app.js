@@ -102,7 +102,7 @@ const batchDevsToRender = (state) => {
   }));
 };
 
-const buildDevsRenderer = (state) => {
+const padDevsToRenderBatches = (state) => {
   const renderChain = [
     () => {
       progressBar.classList.remove('on');
@@ -120,10 +120,10 @@ const buildDevsRenderer = (state) => {
   state.renderFn = renderAPage(renderChain);
 };
 
-const runDevsRenderer = ({ renderFn }) => renderFn();
+const displayBatchedDevs = ({ renderFn }) => renderFn();
 
 const scheduleRenderDevs = () => {
-  rICQueue({ state: {} }, batchDevsToRender, buildDevsRenderer, runDevsRenderer);
+  rICQueue({ state: {} }, batchDevsToRender, padDevsToRenderBatches, displayBatchedDevs);
 };
 
 const runQuery = async (query) => {
