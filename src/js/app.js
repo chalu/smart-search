@@ -158,7 +158,7 @@ const enableSmartSearch = () => {
 
   let tourId;
   let tourIndex = 0;
-  const tour = ['', 'make your move ...', 'start by typing @ or #', "there's so much you can do", ''];
+  const tour = ['', 'make your move ...', 'start by typing @ or #', 'so much is possible', ''];
   const getNextTourStep = () => {
     const step = tour[tourIndex];
     tourIndex = (tourIndex + 1) % tour.length;
@@ -199,7 +199,10 @@ const handleFecthResponse = async ([data]) => {
     uiState.devsToRender = devsToRender;
     uiState.allDevsCount += devsToRender.length;
 
-    requestAnimationFrame(() => select('body').classList.add('ready'));
+    requestAnimationFrame(() => {
+      select('[data-search-wrap] input').setAttribute('placeholder', '');
+      select('body').classList.add('ready');
+    });
     scheduleRenderDevs();
     enableSmartSearch();
     uiState.displayedFirstPage = true;
