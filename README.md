@@ -4,7 +4,11 @@
 
 > Performant way to load large data into frontend apps and intuitively query such data. See it live at [https://smart-inapp-search.netlify.app](https://smart-inapp-search.netlify.app)
 
-<img src="./src/images/mobile-preview.png" width="300px" style="display: block; margin: 0 auto;">
+<img src="./src/images/app-preview.png" />
+
+> Ultimately, Pagespeed Insights will help with **field data** of how real users experience the app, but below is a snapshot of the runtime performance of the app, measured with simulated throttling (slow 3G and 6x CPU slowdown) - like on a $100 smaprt phone with a slow network in an emerging market!
+
+<img src="./src/images/search-and-runtime-performance.png" />
 
 > **This Is Still Work In Progress**
 
@@ -16,7 +20,7 @@ This app aims to be a PWA that attempts to do the above and more. It should be s
 
 ## Current Features
 
-> Performance is a major implicit feature for this app. Though not listed below, performance and core web vitals scores on [web.dev/measure](web.dev/measure) and [PSI](https://developers.google.com/speed/pagespeed/insights/) **should** remain optimal. Also, performance tracing with simulated throttled CPU (6x slowdown) and slow 3G (in Chrome DevTools) **should** produce close to no jank
+> Performance is a major implicit feature for this app. Though not listed below, performance and core web vitals scores on [web.dev/measure](https://lighthouse-dot-webdotdevsite.appspot.com//lh/html?url=https%3A%2F%2Fsmart-inapp-search.netlify.app%2F) and [PSI](https://developers.google.com/speed/pagespeed/insights/) **should** remain optimal. Also, performance tracing with simulated throttled CPU (6x slowdown) and slow 3G (in Chrome DevTools) **should** produce close to no jank
 
 *   Search by year or birth. E.g `@dob = 1989`
 *   Uses a custom built index for faster searching. The index itself incurs some memory cost but it was a sensible tradeoff. I imaging that on very memory-constrained devices, the index can built on-demand and pushed to an external in-memory store like [https://redis.io/](redis)
@@ -28,6 +32,8 @@ This app aims to be a PWA that attempts to do the above and more. It should be s
 *   Add support for more query operators. That is, support (>, >=, <, <=, !=). E.g `@dob >= 1985`
 
 *   Support searching by month of birth, day or birth, quarter of birth and more, including H1 & H2 which should represent searching for dates matching the first or second half of the year, respectively
+
+*   Significantly improve search UX with actionable (clickable) auto-complete, especially on mobile. Having to type special characters like `@`, `#`, and `=` is not always fun. 
 
 *   Support searching by (tech) tags which often represent stacks, languages, or tools the developer has experience in. E.g `#React` means search for developers tagged with React
 
@@ -44,7 +50,7 @@ This app aims to be a PWA that attempts to do the above and more. It should be s
 
     With the above, a query like `#React = Built With It` means `show me developers who have built a React app`. Similary, a query like `#React >= Deployed It` means `show me developers who have buit and deployed a React app to production and are experienced enough to consult on React`
 
-*   support HTTP streams and allow the app to switch between bulk data fetch and streams (incremental data fetch)
+*   Support HTTP streams and allow the app to switch between bulk data fetch and streams (incremental data fetch)
 
 *   No profile images on 2G connectons
 
@@ -57,3 +63,7 @@ This app aims to be a PWA that attempts to do the above and more. It should be s
 *   Enable pagination over search results when they exceed the page size
 
 *   Record count (i.e 12 of 1500) should reflect search results and indicate page being viewed
+
+*   Measure how long it take to complete a query. Log it to a backend and report the data
+
+*   Visualize the custom built algorithms in realtime and report the variance of each run against the AVG logged run
