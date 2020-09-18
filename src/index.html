@@ -67,16 +67,18 @@
         transition: box-shadow 2s ease;
       }
 
+      [data-search-wrap] input::placeholder {
+        color: #999;
+      }
+
       .ready [data-search-wrap] input {
         box-shadow: 0 3px 3px -2px rgba(0, 0, 0, 0.2), 0 3px 4px 0 rgba(0, 0, 0, 0.14), 0 1px 8px 0 rgba(0, 0, 0, 0.12);
       }
 
-      [data-search-wrap] input:focus {
+      .ready [data-search-wrap] input:focus {
         outline: none;
-      }
-
-      [data-search-wrap] input::placeholder {
-        color: #999;
+        border-color: #3eade6;
+        box-shadow: 0 0 10px rgba(62, 173, 230, .5);
       }
 
       /* [data-search-wrap] input::-webkit-search-cancel-button {
