@@ -294,11 +294,11 @@ const runQuery = async (query) => {
   info(`found ${matchingIndexes.length} matches ...`);
 
   if (matchingIndexes && matchingIndexes.length > 0) {
+    let state = getState();
     const gatherer = new Array(matchingIndexes.length);
     const matched = matchingIndexes.reduce((matches, { id }, pos) => {
-      const state = getState();
       const dev = state.developers[`${id}`];
-      if (dev) matches[pos] = dev.domString;
+      if (dev) matches[pos] = dev;
       return matches;
     }, gatherer);
 
@@ -306,7 +306,7 @@ const runQuery = async (query) => {
       draft.queryMatches = matched;
     });
 
-    const state = getState();
+    state = getState();
     return state.queryMatches;
   }
 

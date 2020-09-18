@@ -154,7 +154,7 @@ const onSearchInput = ({ target }) => {
 const enableSmartSearch = () => {
   const searchField = select('input');
   searchField.addEventListener('input', onSearchInput);
-  searchField.focus();
+  // searchField.focus();
 
   let tourId;
   let tourIndex = 0;
