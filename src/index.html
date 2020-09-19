@@ -85,23 +85,32 @@
         
       } */
 
-      [data-search-wrap] p {
-        min-height: 18px;
+      [data-paginator] {
+        width: 90%;
+        margin: 0 auto 1em auto;
         display: flex;
-        -ms-flex: 1 1;
-        flex: 1 1;
-        -ms-flex-wrap: wrap;
-        flex-wrap: wrap;
-        -ms-flex-pack: justify;
-        justify-content: space-between;
-        /* text-align: right; */
+        align-items: center;
+        justify-content: flex-start;
+        visibility: hidden;
       }
 
-      [data-search-wrap] p span {
-        display: -ms-inline-flexbox;
-        display: inline-flex;
-        -ms-flex-pack: distribute;
-        justify-content: space-between;
+      .ready [data-paginator] {
+        visibility: visible;
+      }
+
+      [data-paginator] button {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        outline: none;
+      }
+
+      [data-paginator] p {
+        margin: 0 1em;
+      }
+
+      [data-paginator] p span {
+        font-size: x-large;
       }
 
       [data-collection-wrap] {
@@ -111,12 +120,6 @@
         flex-wrap: wrap;
         justify-content: flex-start;
         min-height: 250px;
-      }
-
-      [data-collection-wrap] .logo-splash {
-        margin: 0 auto;
-        min-width: 192px;
-        min-height: 192px;
       }
 
       .dev-item {
@@ -228,10 +231,6 @@
           justify-content: center;
         }
 
-        [data-collection-wrap] .logo-splash {
-          margin: 15px auto;
-        }
-
         [data-collection-wrap] .dev-item {
           width: 160px;
         }
@@ -253,11 +252,19 @@
       <label>
         <input type="search" aria-label="Search" placeholder="Warming things up ..." />
       </label>
-      <p>
-        <span></span>
-        <span></span>
-      </p>
     </div>
+
+    <nav data-paginator>
+      <button data-page-prev>
+        <img src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0z" fill="none"/><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>' alt="previous page" />
+      </button>
+      <p>
+        <span>12 of 5000</span>
+      </p>
+      <button data-page-next>
+        <img src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0z" fill="none"/><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>' alt="next page" />
+      </button>
+    </nav>
 
     <div data-collection-wrap>
       <div class="dev-item">
