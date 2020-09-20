@@ -108,6 +108,7 @@
       [data-paginator] p {
         /* margin: 0 1em; */
         margin: 0;
+        min-height: 28px;
       }
 
       [data-paginator] p span {
@@ -131,13 +132,13 @@
         margin: 8px;
         background: #fff;
         box-shadow: 0 3px 3px -2px rgba(0, 0, 0, 0.2), 0 3px 4px 0 rgba(0, 0, 0, 0.14), 0 1px 8px 0 rgba(0, 0, 0, 0.12);
-        transition: opacity 1s ease-in;
+        transition: visibility 0s linear 500ms, opacity 500ms;
       }
 
       .dev-item .avatar {
         width: 64px;
         height: 66px;
-        transition: background-color 1s ease;
+        transition: background-color 500ms ease;
       }
 
       .dev-item .about {
@@ -148,7 +149,6 @@
 
       .dev-item img {
         height: 64px;
-        visibility: hidden;
       }
 
       .dev-item p {
@@ -199,18 +199,16 @@
 
       .ready .dev-item {
         visibility: hidden;
+        opacity: 0;
       }
 
       .ready .dev-item[listed] {
         visibility: visible;
+        opacity: 1;
       }
 
       .ready .dev-item[listed] .avatar {
         background-color: #ddd;
-      }
-
-      .ready .dev-item[listed] img {
-        visibility: visible;
       }
 
       .ready .dev-item[listed] p {
