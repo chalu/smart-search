@@ -248,6 +248,17 @@ const makeDevs = (devs, sink) => devs.reduce((processed, dev) => {
   return processed;
 }, sink);
 
+const paginateTo = (pageSize, page = 0) => {
+  const { developers } = getState();
+  const keys = Object.keys(developers);
+  const start = page * pageSize;
+  const end = start + pageSize;
+  return keys.slice(start, end).reduce((devs, key, index) => {
+    devs[index] = developers[key];
+    return devs;
+  }, new Array(pageSize));
+};
+
 const processDeveloperData = async (payload = {}) => {
   const { pageSize, developers = [], isFirstPage = false } = payload;
 
@@ -261,8 +272,7 @@ const processDeveloperData = async (payload = {}) => {
       draft.staging = developers.slice(pageSize);
     });
 
-    const state = getState();
-    const devsToRender = Object.values(state.developers);
+    const devsToRender = paginateTo(pageSize);
     return { devsToRender };
   }
 
