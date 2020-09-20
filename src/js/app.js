@@ -41,8 +41,7 @@ const { info, error } = logr('App');
 const { select } = useDOMSelector();
 const progressBar = select('progress');
 const contentArea = select('[data-collection-wrap]');
-// const ageDisplay = select('[data-search-wrap] span:nth-child(2)');
-const countDisplay = select('[data-search-wrap] span:nth-child(1)');
+const countDisplay = select('[data-paginator] span');
 
 // const iObserver = new IntersectionObserver((entries) => {
 //   const srcBackup = ({ target }) => {
@@ -108,7 +107,7 @@ const padDevsToRenderBatches = (state) => {
   const renderChain = [
     () => {
       progressBar.classList.remove('on');
-      countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
+      countDisplay.textContent = `${uiState.pageSize} of ${uiState.devsToRender.length}`;
       const placeholders = contentArea.querySelectorAll('.dev-item');
       placeholders.forEach((pl) => pl.removeAttribute('listed'));
     },
