@@ -132,7 +132,22 @@ const scheduleRenderDevs = () => {
 };
 
 const runQuery = async (query) => {
-  uiState.devsToRender = await OMT.runQuery(query);
+  const matches = await OMT.runQuery(query);
+  if (matches.length === 0) {
+    rAFQueue(
+      () => {
+        const placeholders = contentArea.querySelectorAll('.dev-item');
+        placeholders.forEach((pl) => pl.removeAttribute('listed'));
+      },
+      () => {
+        progressBar.classList.remove('on');
+        countDisplay.textContent = `no matches found`;
+      }
+    );
+    return;
+  }
+
+  uiState.devsToRender = matches;
   scheduleRenderDevs();
 };
 
