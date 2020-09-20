@@ -37,7 +37,7 @@ const uiState = {
 };
 
 let OMT;
-const { info, error } = logr('App');
+const { info, error } = logr('App UI');
 const { select } = useDOMSelector();
 const progressBar = select('progress');
 const contentArea = select('[data-collection-wrap]');
@@ -115,6 +115,9 @@ const padDevsToRenderBatches = (state) => {
     () => {
       const placeholders = Array.from(contentArea.querySelectorAll('.dev-item'));
       placeholders.slice(0, uiState.pageSize + 1).forEach((pl) => pl.setAttribute('listed', ''));
+    },
+    () => {
+      info('Displayed devs on UI!');
     }
   ];
 
@@ -124,6 +127,7 @@ const padDevsToRenderBatches = (state) => {
 const displayBatchedDevs = ({ renderFn }) => renderFn();
 
 const scheduleRenderDevs = () => {
+  info('Working on data scheduled for display ...');
   rICQueue({ state: {} }, batchDevsToRender, padDevsToRenderBatches, displayBatchedDevs);
 };
 
@@ -151,6 +155,7 @@ const onSearchInput = ({ target }) => {
 };
 
 const enableSmartSearch = () => {
+  info('Enabling smart search ...');
   const searchField = select('input');
   searchField.addEventListener('input', onSearchInput);
   // searchField.focus();
@@ -183,14 +188,17 @@ const enableSmartSearch = () => {
       searchField.setAttribute('placeholder', `${step}`);
     });
   }, 3000);
+
+  info('Smart search is ready to take queries');
 };
 
 const handleFecthResponse = async ([data]) => {
   const { developers } = data;
   progressBar.value = developers.length;
-  info(`Received ${developers.length} devs data ...`);
+  info(`Received ${developers.length} dev records ...`);
 
   if (!uiState.displayedFirstPage) {
+    info('Working on page 1 of all records ...');
     const payload = { developers, isFirstPage: true, pageSize: uiState.pageSize };
     const { devsToRender } = await OMT.processDeveloperData(payload);
 
@@ -207,6 +215,7 @@ const handleFecthResponse = async ([data]) => {
     uiState.displayedFirstPage = true;
   }
 
+  info('There\'s more data, lets process the rest in the background');
   const { devsCount } = await OMT.processDeveloperData();
   uiState.allDevsCount += devsCount - uiState.pageSize;
   requestAnimationFrame(() => {
@@ -235,6 +244,7 @@ const startApp = async () => {
   const worker = new Worker('./js/off-main-thread/omt.js');
   OMT = wrap(worker);
 
+  info(`Fetching devs data ...`);
   fetchData();
 };
 

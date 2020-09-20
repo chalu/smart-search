@@ -36,7 +36,7 @@ const arrayviewer = (anArray) => {
       this.start = dStart;
       this.end = dEnd || this.end;
       this.length = this.end - this.start;
-      info(`down to [${this.start}, ${this.end}] with ${this.length} items`);
+      info(`Down to [${this.start}, ${this.end}] with ${this.length} items`);
       return this;
     }
   });
@@ -45,7 +45,7 @@ const arrayviewer = (anArray) => {
   const arraypartition = (opts = {}) => {
     const { at: pivot } = opts;
     const pivotIndex = pivot || Math.floor(view.length / 2);
-    info(`${view.length} items`);
+    info(`Looking at ${view.length} items`);
     return {
       midIndex: pivotIndex,
       midItem: view.get(pivotIndex),
@@ -98,8 +98,8 @@ const getMonths = () => [
 const searchByFaningOut = (payload) => {
   const { midIndex, data, isEQ } = payload;
   const start = data.start + midIndex;
-  info(`fanning out @ [${midIndex}], which resolves to [${start}]`);
-  info(`your results should be the closest neighbours of [${start}] ....`);
+  info(`Fanning out @ [${midIndex}], which resolves to [${start}]`);
+  info(`Your results should be the closest neighbours of [${start}] ....`);
 
   let left = midIndex;
   let right = midIndex;
@@ -147,7 +147,7 @@ const runBinarySearch = (payload) => {
   }
 
   const { left, right } = partition;
-  info(`pivoting @ [${midIndex}]`);
+  info(`Pivoting @ [${midIndex}]`);
   const dataView = isGT(midItem) === true ? left() : right();
   return runBinarySearch({
     isEQ,
@@ -164,7 +164,7 @@ const searchByYearOfBirth = (query) => {
 
   // search by 4 digit year, e.g 1985
   if (/\d{4}/.test(qry)) {
-    info('searching by year');
+    info('User is searching by year');
     const queryYear = parseInt(qry, 10);
     const isGT = ({ yob }) => yob > queryYear;
     const isEQ = ({ yob }) => yob === queryYear;
@@ -292,6 +292,7 @@ const processDeveloperData = async (payload = {}) => {
 };
 
 const runQuery = async (query) => {
+  const startTime = Date.now();
   info(query);
   const engine = engines.find(({ matcher }) => matcher && matcher.test(query) === true);
   if (!engine) return []; // no matches found
@@ -301,7 +302,8 @@ const runQuery = async (query) => {
   });
 
   const matchingIndexes = engine.search(query);
-  info(`found ${matchingIndexes.length} matches ...`);
+  const elapsedTime = (Date.now() - startTime);
+  info(`Urmm, we found ${matchingIndexes.length} matches in ${elapsedTime} miliseconds ...`);
 
   if (matchingIndexes && matchingIndexes.length > 0) {
     let state = getState();
