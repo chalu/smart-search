@@ -34,7 +34,7 @@ export const logr = (realm) => {
   const style = 'color:#fff;display:block';
   return {
     info: (...msgs) => {
-      console.log(`%c Smart-Search (${realm}) %c`, `background:#333;${style}`, '', ...msgs);
+      console.log(`%c Smart-Search (${realm}) %c`, `background:darkblue;${style}`, '', ...msgs);
     },
     error: (...msgs) => {
       console.error(`%c Smart-Search (${realm}) %c`, `background:darkred;${style}`, '', ...msgs);
