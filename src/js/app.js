@@ -37,12 +37,11 @@ const uiState = {
 };
 
 let OMT;
-const { info, error } = logr('App');
+const { info, error } = logr('App UI');
 const { select } = useDOMSelector();
 const progressBar = select('progress');
 const contentArea = select('[data-collection-wrap]');
-// const ageDisplay = select('[data-search-wrap] span:nth-child(2)');
-const countDisplay = select('[data-search-wrap] span:nth-child(1)');
+const countDisplay = select('[data-paginator] span');
 
 // const iObserver = new IntersectionObserver((entries) => {
 //   const srcBackup = ({ target }) => {
@@ -108,7 +107,7 @@ const padDevsToRenderBatches = (state) => {
   const renderChain = [
     () => {
       progressBar.classList.remove('on');
-      countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
+      countDisplay.textContent = `${uiState.pageSize} of ${uiState.devsToRender.length}`;
       const placeholders = contentArea.querySelectorAll('.dev-item');
       placeholders.forEach((pl) => pl.removeAttribute('listed'));
     },
@@ -116,6 +115,9 @@ const padDevsToRenderBatches = (state) => {
     () => {
       const placeholders = Array.from(contentArea.querySelectorAll('.dev-item'));
       placeholders.slice(0, uiState.pageSize + 1).forEach((pl) => pl.setAttribute('listed', ''));
+    },
+    () => {
+      info('Displayed devs on UI!');
     }
   ];
 
@@ -125,11 +127,27 @@ const padDevsToRenderBatches = (state) => {
 const displayBatchedDevs = ({ renderFn }) => renderFn();
 
 const scheduleRenderDevs = () => {
+  info('Working on data scheduled for display ...');
   rICQueue({ state: {} }, batchDevsToRender, padDevsToRenderBatches, displayBatchedDevs);
 };
 
 const runQuery = async (query) => {
-  uiState.devsToRender = await OMT.runQuery(query);
+  const matches = await OMT.runQuery(query);
+  if (matches.length === 0) {
+    rAFQueue(
+      () => {
+        const placeholders = contentArea.querySelectorAll('.dev-item');
+        placeholders.forEach((pl) => pl.removeAttribute('listed'));
+      },
+      () => {
+        progressBar.classList.remove('on');
+        countDisplay.textContent = `no matches found`;
+      }
+    );
+    return;
+  }
+
+  uiState.devsToRender = matches;
   scheduleRenderDevs();
 };
 
@@ -152,9 +170,10 @@ const onSearchInput = ({ target }) => {
 };
 
 const enableSmartSearch = () => {
+  info('Enabling smart search ...');
   const searchField = select('input');
   searchField.addEventListener('input', onSearchInput);
-  searchField.focus();
+  // searchField.focus();
 
   let tourId;
   let tourIndex = 0;
@@ -184,14 +203,17 @@ const enableSmartSearch = () => {
       searchField.setAttribute('placeholder', `${step}`);
     });
   }, 3000);
+
+  info('Smart search is ready to take queries');
 };
 
 const handleFecthResponse = async ([data]) => {
   const { developers } = data;
   progressBar.value = developers.length;
-  info(`Received ${developers.length} devs data ...`);
+  info(`Received ${developers.length} dev records ...`);
 
   if (!uiState.displayedFirstPage) {
+    info('Working on page 1 of all records ...');
     const payload = { developers, isFirstPage: true, pageSize: uiState.pageSize };
     const { devsToRender } = await OMT.processDeveloperData(payload);
 
@@ -208,6 +230,7 @@ const handleFecthResponse = async ([data]) => {
     uiState.displayedFirstPage = true;
   }
 
+  info('There\'s more data, lets process the rest in the background');
   const { devsCount } = await OMT.processDeveloperData();
   uiState.allDevsCount += devsCount - uiState.pageSize;
   requestAnimationFrame(() => {
@@ -236,6 +259,7 @@ const startApp = async () => {
   const worker = new Worker('./js/off-main-thread/omt.js');
   OMT = wrap(worker);
 
+  info(`Fetching devs data ...`);
   fetchData();
 };
 
