@@ -88,7 +88,7 @@ const batchDevsToRender = (state) => {
     dom.setAttribute('data-dev-id', id);
 
     const img = dom.querySelector('img');
-    img.setAttribute('data-src', avatar);
+    img.setAttribute('src', avatar);
     img.setAttribute('title', bio.name);
 
     dom.querySelector('.about p:nth-child(1)').textContent = bio.shortName;
