@@ -65,14 +65,6 @@ const countDisplay = select('[data-paginator] span');
 //     });
 // });
 
-// const timeIsRemaining = (deadline) => {
-//   if (deadline && typeof deadline.timeRemaining === 'function') {
-//     // TODO if possible, expose what 0.75 represents to the UI and allow the user to control it
-//     return parseInt(deadline.timeRemaining() * uiState.idleTimeUsage, 10) > 0;
-//   }
-//   return false;
-// };
-
 const renderAPage = (queue) => () => rAFQueue(...queue);
 
 const batchDevsToRender = (state) => {
