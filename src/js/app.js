@@ -3,7 +3,7 @@
 
 import { wrap } from 'https://unpkg.com/comlink@4.3.0/dist/esm/comlink.mjs';
 import {
-  logr, useDOMSelector, rICQueue, rAFQueue
+  logr, useDOMSelector, rICQueue, rAFQueue, attrIsSupported
 } from './ui-utils.js';
 
 const uiState = {
@@ -26,6 +26,8 @@ const uiState = {
    * default is 3.5k
    */
   devQty: 1500,
+
+  resetSearchResults: false,
 
   devsToRender: [],
 
@@ -107,7 +109,13 @@ const padDevsToRenderBatches = (state) => {
   const renderChain = [
     () => {
       progressBar.classList.remove('on');
-      countDisplay.textContent = `${uiState.pageSize} of ${uiState.devsToRender.length}`;
+
+      let recordTotal = uiState.devsToRender.length;
+      if (uiState.resetSearchResults) {
+        recordTotal = uiState.allDevsCount;
+        uiState.resetSearchResults = false;
+      }
+      countDisplay.textContent = `${uiState.pageSize} of ${recordTotal}`;
       const placeholders = contentArea.querySelectorAll('.dev-item');
       placeholders.forEach((pl) => pl.removeAttribute('listed'));
     },
@@ -115,8 +123,6 @@ const padDevsToRenderBatches = (state) => {
     () => {
       const placeholders = Array.from(contentArea.querySelectorAll('.dev-item'));
       placeholders.slice(0, uiState.pageSize + 1).forEach((pl) => pl.setAttribute('listed', ''));
-    },
-    () => {
       info('Displayed devs on UI!');
     }
   ];
@@ -132,6 +138,13 @@ const scheduleRenderDevs = () => {
 };
 
 const runQuery = async (query) => {
+  // TODO this should be run against 
+  // all valid query patterns this app
+  // supports. The worker should give us
+  // the patterns or say this is a valid query
+  const queryFormat = /[@|#]\w+\s*[=]\s*\w+/;
+  if (!queryFormat.test(query)) return;
+
   const matches = await OMT.runQuery(query);
   if (matches.length === 0) {
     rAFQueue(
@@ -158,9 +171,6 @@ const onSearchInput = ({ target }) => {
   const input = (target.value || '').trim();
   if (input === '') return;
 
-  const queryFormat = /[@|#]\w+\s*[=]\s*\w+/;
-  if (!queryFormat.test(input)) return;
-
   uiState.searchDebouncer = setTimeout(() => {
     queryPromise.then(() => {
       queryPromise = runQuery(input);
@@ -169,11 +179,48 @@ const onSearchInput = ({ target }) => {
   }, 1000);
 };
 
+const resetToFirstPage = async () => {
+  uiState.devsToRender = await OMT.paginateTo({
+    page: 0,
+    pageSize: uiState.pageSize
+  });
+  uiState.resetSearchResults = true;
+  scheduleRenderDevs();
+};
+
+const onSearchReset = async ({ target }) => {
+  const input = (target.value || '').trim();
+  if (input === '') {
+    resetToFirstPage();
+  }
+};
+
+const onSearch = async ({ target }) => {
+  const input = (target.value || '').trim();
+  if (input === '') {
+    resetToFirstPage();
+    return
+  }
+
+  runQuery(input);
+};
+
 const enableSmartSearch = () => {
   info('Enabling smart search ...');
   const searchField = select('input');
-  searchField.addEventListener('input', onSearchInput);
-  // searchField.focus();
+
+  const hasIncrementalSearch = attrIsSupported({
+    attr: 'incremental',
+    element: searchField
+  });
+  
+  if (hasIncrementalSearch) {
+    searchField.addEventListener('search', onSearch);
+  } else {
+    searchField.addEventListener('input', onSearchInput);
+    searchField.addEventListener('search', onSearchReset);
+    searchField.addEventListener('keyup', onSearchReset);
+  }
 
   let tourId;
   let tourIndex = 0;
@@ -232,9 +279,9 @@ const handleFecthResponse = async ([data]) => {
 
   info('There\'s more data, lets process the rest in the background');
   const { devsCount } = await OMT.processDeveloperData();
-  uiState.allDevsCount += devsCount - uiState.pageSize;
+  uiState.allDevsCount = devsCount;
   requestAnimationFrame(() => {
-    countDisplay.textContent = `${uiState.devsToRender.length} of ${uiState.allDevsCount}`;
+    countDisplay.textContent = `${uiState.pageSize} of ${uiState.allDevsCount}`;
   });
 };
 
