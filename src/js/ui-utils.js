@@ -20,6 +20,11 @@ export const useDOMSelector = (root = document) => {
   return { select, selectAll };
 };
 
+export const attrIsSupported = ({ attr, element: el }) => {
+  const node = typeof el === 'string' ? document.createElement(`${el}`) : el;
+  return `${attr}` in node;
+};
+
 export const getDomParser = () => {
   let parser;
   return () => {
