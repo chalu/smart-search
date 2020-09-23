@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 importScripts('https://cdn.jsdelivr.net/npm/comlink@4.3.0/dist/umd/comlink.min.js');
 importScripts('https://cdn.jsdelivr.net/npm/immer@7.0.8/dist/immer.umd.production.min.js');
 
@@ -273,7 +275,7 @@ const processDeveloperData = async (payload = {}) => {
       draft.staging = developers.slice(pageSize);
     });
 
-    const devsToRender = paginateTo({pageSize});
+    const devsToRender = paginateTo({ pageSize });
     return { devsToRender };
   }
 

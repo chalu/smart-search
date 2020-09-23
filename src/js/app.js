@@ -130,7 +130,7 @@ const scheduleRenderDevs = () => {
 };
 
 const runQuery = async (query) => {
-  // TODO this should be run against 
+  // TODO this should be run against
   // all valid query patterns this app
   // supports. The worker should give us
   // the patterns or say this is a valid query
@@ -146,7 +146,7 @@ const runQuery = async (query) => {
       },
       () => {
         progressBar.classList.remove('on');
-        countDisplay.textContent = `no matches found`;
+        countDisplay.textContent = 'no matches found';
       }
     );
     return;
@@ -191,7 +191,7 @@ const onSearch = async ({ target }) => {
   const input = (target.value || '').trim();
   if (input === '') {
     resetToFirstPage();
-    return
+    return;
   }
 
   runQuery(input);
@@ -205,7 +205,7 @@ const enableSmartSearch = () => {
     attr: 'incremental',
     element: searchField
   });
-  
+
   if (hasIncrementalSearch) {
     searchField.addEventListener('search', onSearch);
   } else {
@@ -298,7 +298,7 @@ const startApp = async () => {
   const worker = new Worker('./js/off-main-thread/omt.js');
   OMT = wrap(worker);
 
-  info(`Fetching devs data ...`);
+  info('Fetching devs data ...');
   fetchData();
 };
 

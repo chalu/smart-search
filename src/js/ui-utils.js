@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 const nodeMap = {};
 
 export const useDOMSelector = (root = document) => {
