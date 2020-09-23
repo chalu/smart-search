@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 importScripts('https://cdn.jsdelivr.net/npm/comlink@4.3.0/dist/umd/comlink.min.js');
 importScripts('https://cdn.jsdelivr.net/npm/immer@7.0.8/dist/immer.umd.production.min.js');
 
@@ -248,7 +250,8 @@ const makeDevs = (devs, sink) => devs.reduce((processed, dev) => {
   return processed;
 }, sink);
 
-const paginateTo = (pageSize, page = 0) => {
+const paginateTo = (opts) => {
+  const { page = 0, pageSize } = opts;
   const { developers } = getState();
   const keys = Object.keys(developers);
   const start = page * pageSize;
@@ -272,7 +275,7 @@ const processDeveloperData = async (payload = {}) => {
       draft.staging = developers.slice(pageSize);
     });
 
-    const devsToRender = paginateTo(pageSize);
+    const devsToRender = paginateTo({ pageSize });
     return { devsToRender };
   }
 
@@ -330,6 +333,7 @@ const runQuery = async (query) => {
  */
 const OffMainThreadAPI = {
   runQuery,
+  paginateTo,
   processDeveloperData
 };
 Comlink.expose(OffMainThreadAPI);

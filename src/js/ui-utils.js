@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 const nodeMap = {};
 
 export const useDOMSelector = (root = document) => {
@@ -18,6 +20,11 @@ export const useDOMSelector = (root = document) => {
   const select = domQuery('querySelector');
   const selectAll = domQuery('querySelectorAll');
   return { select, selectAll };
+};
+
+export const attrIsSupported = ({ attr, element: el }) => {
+  const node = typeof el === 'string' ? document.createElement(`${el}`) : el;
+  return `${attr}` in node;
 };
 
 export const getDomParser = () => {
